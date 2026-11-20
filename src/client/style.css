@@ -14,22 +14,26 @@
   --warn-icon: '';
 
   --font: 'Baloo 2', 'Nunito', system-ui, sans-serif;
-  --step--1: 0.875rem;
-  --step-0: 1rem;
-  --step-1: 1.25rem;
-  --step-2: 1.6rem;
+  /* PRD v4 §4: no UI text under 18 px at 1280×720 (1rem = 16 px, so the smallest step is 1.125rem). */
+  --step--1: 1.125rem;
+  --step-0: 1.125rem;
+  --step-1: 1.35rem;
+  --step-2: 1.7rem;
   --step-5: clamp(3rem, 8vw, 5.5rem);
   --gutter: clamp(16px, 2.5vw, 28px);
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--night); color: var(--paper); font-family: var(--font); }
+body { font-size: var(--step-0); }
+/* "Chữ lớn": every rem-based size ×1.25. */
+html.large-text { font-size: 125%; }
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; cursor: crosshair; }
 
 kbd {
   font-family: var(--font);
   font-weight: 700;
-  font-size: 0.9em;
+  font-size: 1em;
   min-width: 1.9em;
   padding: 0 0.45em;
   display: inline-grid;
@@ -245,3 +249,46 @@ li.dark .lantern::after {
 .toggle { display: flex; align-items: center; gap: 10px; margin: 10px 0; cursor: pointer; }
 .toggle input { width: 18px; height: 18px; accent-color: var(--amber); }
 @media (prefers-reduced-motion: reduce) { li.weak .lantern, li.weak .fuel { animation: none; } }
+
+/* ---------- PRD v4 §4: subtitles and shade arrows ---------- */
+.cues {
+  position: fixed; left: 50%; bottom: 150px; transform: translateX(-50%);
+  list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  pointer-events: none; z-index: 5;
+}
+.cues li {
+  padding: 6px 18px; border-radius: 10px; background: rgba(10, 8, 24, 0.82); color: var(--paper);
+  font-size: var(--step-0); font-weight: 700; border: 1px solid rgba(243, 230, 201, 0.3);
+}
+.shade-arrow {
+  position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none;
+  border-top: 13px solid transparent; border-bottom: 13px solid transparent;
+  border-left: 24px solid var(--warn); margin: -13px 0 0 -12px;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.9));
+}
+body.colorblind .shade-arrow { border-left-color: #ffffff; }
+
+/* "Giảm chuyển động": no blinking, swaying or flashing anywhere in the UI. */
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after { animation: none !important; transition: none !important; }
+body.reduce-motion .elder blockquote p { opacity: 1; }
+
+/* ---------- PRD v4 §3: leaderboard ---------- */
+.menu-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+button.secondary { background: transparent; color: var(--paper); border: 1px solid rgba(243, 230, 201, 0.45); }
+button.secondary:hover { background: rgba(243, 230, 201, 0.1); }
+button:disabled { opacity: 0.5; cursor: default; }
+.board-list { margin: 0 0 1.4em; padding: 0 0 0 1.6em; max-width: 30rem; font-size: var(--step-0); }
+.board-list li { display: grid; grid-template-columns: 1fr auto; gap: 0 16px; padding: 6px 0; border-bottom: 1px solid rgba(243, 230, 201, 0.15); }
+.board-list li::marker { color: var(--amber); font-weight: 800; }
+.board-list .who { font-weight: 700; }
+.board-list .pts { font-weight: 800; color: var(--amber-soft); font-variant-numeric: tabular-nums; text-align: right; }
+.board-list .meta { grid-column: 1 / -1; color: var(--paper-dim); }
+.save-score { margin: 0 0 1.2em; max-width: 30rem; }
+.save-score label { display: block; font-weight: 700; margin-bottom: 6px; }
+.save-score .row { display: flex; gap: 8px; }
+.save-score input {
+  flex: 1; font: 600 var(--step-0) var(--font); color: var(--paper); background: rgba(243, 230, 201, 0.08);
+  border: 1px solid rgba(243, 230, 201, 0.4); border-radius: 12px; padding: 0.4em 0.7em;
+}
+.save-score .save-msg { color: var(--paper-dim); margin: 6px 0 0; }
+dialog { max-height: calc(100vh - 32px); overflow-y: auto; }

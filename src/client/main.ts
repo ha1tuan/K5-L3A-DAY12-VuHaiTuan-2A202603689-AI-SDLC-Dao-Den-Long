@@ -2,7 +2,11 @@ import * as THREE from 'three';
 import { CONTRACT_TUNING, createSim, nightDef, type NightId, type Scenario, type Sim, type SimEvent } from '../sim';
 import { GameAudio } from './audio';
 import { advanceCampaign, startCampaign, type Campaign } from './campaign';
+import { BENCH, frameStats, orbitCamera } from './benchMath';
 import { MobaCamera } from './camera';
+import { CueView } from './cues';
+import { isoWithZone, LeaderboardStore } from './leaderboardStore';
+import type { Entry } from '../leaderboard';
 import { Hud } from './hud';
 import { Controls } from './input/controls';
 import { KeyBindings, keyLabel } from './input/keybindings';
@@ -41,6 +45,8 @@ const bindings = new KeyBindings(storage);
 const controls = new Controls(bindings);
 const hud = new Hud(bindings);
 const settings = new SettingsPanel(bindings, storage);
+const cues = new CueView();
+const board = new LeaderboardStore(storage);
 cam.sensitivity = loadSettings(storage).sensitivity;
 const audio = new GameAudio(loadSettings(storage).volume);
 const unlockAudio = () => audio.unlock();
@@ -56,6 +62,8 @@ type Phase = 'title' | 'intro' | 'playing' | 'ended';
 let phase: Phase = 'title';
 let campaign: Campaign = startCampaign();
 let sim: Sim = createSim({ seed: 1, night: 1 });
+/** Seed of the night being played, saved with a leaderboard entry. */
+let nightSeed = 1;
 let world = new WorldView(nightDef(1, T));
 const emptyTally = () => ({ motes: 0, lanterns: 0, relights: 0, stuns: 0, drainStuns: 0 });
 let tally = emptyTally();
@@ -67,8 +75,10 @@ function loadNight(night: NightId, scenario?: Scenario): void {
   world = new WorldView(nightDef(night, T));
   cam.bounds = world.bounds;
   applyPalette();
-  sim = createSim({ seed: Math.floor(Math.random() * 2 ** 31), night, scenario });
+  nightSeed = Math.floor(Math.random() * 2 ** 31);
+  sim = createSim({ seed: nightSeed, night, scenario });
   tally = emptyTally();
+  cues.reset();
   controls.reset();
   pauseEdge = false;
   audio.reset();
@@ -116,6 +126,10 @@ function applyPalette(): void {
   const colorblind = settings.values.colorblind;
   document.body.classList.toggle('colorblind', colorblind);
   world.setColorScheme(paletteFor(colorblind));
+  // PRD v4 §4: reduced motion (no flashes or blinking) and large UI text ×1.25.
+  document.body.classList.toggle('reduce-motion', settings.values.reduceMotion);
+  document.documentElement.classList.toggle('large-text', settings.values.largeText);
+  world.reduceMotion = settings.values.reduceMotion;
 }
 settings.onChange = () => {
   applyPalette();
@@ -166,9 +180,68 @@ function showEnding(): void {
   (endEl.querySelector('dl') as HTMLElement).innerHTML =
     rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') +
     `<dt class="total">Tổng điểm</dt><dd class="total">${campaign.total.toLocaleString('vi-VN')}</dd>`;
+  // PRD v4 §3: after Màn Bình Minh or any lost night, offer to save the chain's score.
+  const offer = campaign.finished || !won;
+  saveForm.hidden = !offer;
+  if (offer) {
+    pendingEntry = { score: campaign.total, nights_won: campaign.finished ? 3 : campaign.night - 1, seed: nightSeed };
+    saveInput.disabled = false;
+    saveButton.disabled = false;
+    saveMsg.textContent = `Tổng điểm ${campaign.total.toLocaleString('vi-VN')}, ${pendingEntry.nights_won}/3 Đêm thắng. Tên: 3–12 ký tự, chữ (có dấu cũng được), số hoặc _.`;
+  }
   endEl.hidden = false;
-  button.focus();
+  if (offer) saveInput.focus();
+  else button.focus();
 }
+
+// --- leaderboard (PRD v4 §3) -------------------------------------------------
+const saveForm = document.querySelector('#save-score') as HTMLFormElement;
+const saveInput = document.querySelector('#player-name') as HTMLInputElement;
+const saveButton = saveForm.querySelector('button') as HTMLButtonElement;
+const saveMsg = saveForm.querySelector('.save-msg') as HTMLElement;
+const boardEl = document.querySelector('#board') as HTMLElement;
+let pendingEntry: Omit<Entry, 'name' | 'achieved_at'> | null = null;
+const escapeHtml = (t: string) => t.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+saveForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!pendingEntry) return;
+  const entry: Entry = { name: saveInput.value.trim(), achieved_at: isoWithZone(new Date()), ...pendingEntry };
+  try {
+    const { entries, onDisk } = await board.add(entry);
+    const rank = entries.findIndex((x) => x.name === entry.name.normalize('NFC') && x.achieved_at === entry.achieved_at) + 1;
+    saveMsg.textContent = rank ? `Đã lưu: hạng ${rank} trên Bảng xếp hạng${onDisk ? '' : ' (trong trình duyệt này)'}.` : 'Đã lưu, nhưng điểm chưa vào top 10.';
+    pendingEntry = null;
+    saveInput.disabled = true;
+    saveButton.disabled = true;
+    (endEl.querySelector('#again') as HTMLButtonElement).focus();
+  } catch (err) {
+    saveMsg.textContent = (err as Error).message;
+    saveInput.focus();
+  }
+});
+
+async function showBoard(): Promise<void> {
+  phase = 'title';
+  titleEl.hidden = true;
+  boardEl.hidden = false;
+  const list = boardEl.querySelector('.board-list') as HTMLElement;
+  const { entries } = await board.list();
+  (boardEl.querySelector('.board-empty') as HTMLElement).hidden = entries.length > 0;
+  list.innerHTML = entries
+    .map(
+      (x) =>
+        `<li><span class="who">${escapeHtml(x.name)}</span><span class="pts">${x.score.toLocaleString('vi-VN')}</span>` +
+        `<span class="meta">${x.nights_won}/3 Đêm · ${new Date(x.achieved_at).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })}</span></li>`,
+    )
+    .join('');
+  (boardEl.querySelector('#close-board') as HTMLButtonElement).focus();
+}
+document.querySelector('#open-board')!.addEventListener('click', () => void showBoard());
+document.querySelector('#close-board')!.addEventListener('click', () => {
+  boardEl.hidden = true;
+  titleEl.hidden = false;
+});
 
 function continueAfterEnding(): void {
   if (campaign.finished) newCampaign();
@@ -185,6 +258,7 @@ function handleEvents(events: SimEvent[], draining: Set<string>): void {
   }
   world.onEvents(events, sim.state);
   audio.onStep(events, sim.state);
+  cues.onStep(sim.state, events);
 }
 
 // --- input wiring -----------------------------------------------------------
@@ -227,7 +301,7 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     togglePause();
   }
-  if (e.code === 'Enter' && phase === 'title') newCampaign();
+  if (e.code === 'Enter' && phase === 'title' && boardEl.hidden) newCampaign();
   else if (e.code === 'Enter' && phase === 'intro') {
     e.preventDefault();
     beginNight();
@@ -239,6 +313,7 @@ document.querySelector('#again')!.addEventListener('click', continueAfterEnding)
 
 // --- loop -------------------------------------------------------------------
 const tmpProj = new THREE.Vector3();
+const viewDir = new THREE.Vector3();
 const project = (p: readonly number[]) => {
   tmpProj.set(p[0], p[1], p[2]).project(camera3d);
   return { x: ((tmpProj.x + 1) / 2) * window.innerWidth, y: ((1 - tmpProj.y) / 2) * window.innerHeight, inFront: tmpProj.z < 1 };
@@ -263,7 +338,8 @@ function frame(now: number): void {
     acc += dt;
     let steps = 0;
     while (acc >= STEP && steps < MAX_STEPS_PER_FRAME) {
-      const ctrl = controls.sample(sim.state.player.pos);
+      camera3d.getWorldDirection(viewDir);
+      const ctrl = controls.sample(sim.state.player.pos, [viewDir.x, viewDir.z]);
       if (sim.state.paused) Object.assign(ctrl, { move: [0, 0], jump: false, interact: false, pulse: false, dash: false });
       ctrl.pause = pauseEdge;
       pauseEdge = false;
@@ -288,6 +364,7 @@ function frame(now: number): void {
   world.sync(sim.state, frozen ? 0 : dt);
   audio.setPaused(frozen || phase !== 'playing');
   hud.update(sim.state, DURATION[sim.state.night], project);
+  cues.draw(sim.state, project, phase !== 'playing' || frozen);
   renderer.render(world.scene, camera3d);
   requestAnimationFrame(frame);
 }
@@ -315,4 +392,54 @@ if (params.get('demo') === 'fuel') {
     shades: [{ id: 'S1', pos: [-1.2, 1, 26.5], state: 'drain', target_lantern_id: 'L1' }],
   });
 }
-requestAnimationFrame(frame);
+
+/**
+ * PRD v4 §1 benchmark scene (?bench=1&seed=42&duration=30): Night 1 with the full look, the sim's bench
+ * mode (200 wandering shades, 100 motes, L1–L3 lit), no input, the camera on its 15 s orbit.
+ * After 3 s of warm-up it records every frame's dt for `duration` s and publishes the stats on window.__bench.
+ */
+function runBench(seed: number, durationS: number): void {
+  titleEl.hidden = true;
+  world.dispose();
+  world = new WorldView(nightDef(1, T));
+  applyPalette();
+  sim = createSim({ seed, night: 1, bench: true });
+  const idle = { move: [0, 0] as [number, number], camYawDeg: 0, jump: false, interact: false, pulse: false };
+  const dts: number[] = [];
+  let start = -1;
+  let prev = 0;
+  let simAcc = 0;
+  const w = window as unknown as { __bench?: object; __THREE_REVISION?: string };
+  w.__THREE_REVISION = THREE.REVISION;
+  function benchFrame(now: number): void {
+    if (start < 0) {
+      start = now;
+      prev = now;
+      w.__bench = { state: 'running', first_frame_epoch_ms: performance.timeOrigin + now };
+    }
+    const dtMs = now - prev;
+    prev = now;
+    const t = (now - start) / 1000;
+    if (t > BENCH.warmupS && dtMs > 0) dts.push(dtMs);
+    simAcc += Math.min(0.25, dtMs / 1000);
+    while (simAcc >= STEP) {
+      handleEvents(sim.step(idle), new Set());
+      simAcc -= STEP;
+    }
+    const [x, y, z] = orbitCamera(t);
+    camera3d.position.set(x, y, z);
+    camera3d.lookAt(0, 0, 0);
+    world.sync(sim.state, dtMs / 1000);
+    hud.update(sim.state, DURATION[1], project);
+    renderer.render(world.scene, camera3d);
+    if (t >= BENCH.warmupS + durationS) {
+      w.__bench = { ...w.__bench, state: 'done', ...frameStats(dts) };
+      return;
+    }
+    requestAnimationFrame(benchFrame);
+  }
+  requestAnimationFrame(benchFrame);
+}
+
+if (params.get('bench')) runBench(Number(params.get('seed') ?? 42), Number(params.get('duration') ?? 30));
+else requestAnimationFrame(frame);

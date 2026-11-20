@@ -14,6 +14,8 @@ export class SettingsPanel {
   private volume = this.root.querySelector('#volume') as HTMLInputElement;
   private sensitivity = this.root.querySelector('#sensitivity') as HTMLInputElement;
   private colorblind = this.root.querySelector('#colorblind') as HTMLInputElement;
+  private reduceMotion = this.root.querySelector('#reduce-motion') as HTMLInputElement;
+  private largeText = this.root.querySelector('#large-text') as HTMLInputElement;
   private capturing: Action | null = null;
   values: Settings;
   onChange: () => void = () => {};
@@ -29,14 +31,24 @@ export class SettingsPanel {
     this.volume.value = String(this.values.volume);
     this.sensitivity.value = String(this.values.sensitivity);
     this.colorblind.checked = this.values.colorblind;
+    this.reduceMotion.checked = this.values.reduceMotion;
+    this.largeText.checked = this.values.largeText;
     const saveSliders = () => {
-      this.values = { volume: Number(this.volume.value), sensitivity: Number(this.sensitivity.value), colorblind: this.colorblind.checked };
+      this.values = {
+        volume: Number(this.volume.value),
+        sensitivity: Number(this.sensitivity.value),
+        colorblind: this.colorblind.checked,
+        reduceMotion: this.reduceMotion.checked,
+        largeText: this.largeText.checked,
+      };
       saveSettings(this.storage, this.values);
       this.onChange();
     };
     this.volume.addEventListener('input', saveSliders);
     this.sensitivity.addEventListener('input', saveSliders);
     this.colorblind.addEventListener('change', saveSliders);
+    this.reduceMotion.addEventListener('change', saveSliders);
+    this.largeText.addEventListener('change', saveSliders);
 
     this.root.querySelector('[data-reset]')!.addEventListener('click', () => {
       this.bindings.reset();

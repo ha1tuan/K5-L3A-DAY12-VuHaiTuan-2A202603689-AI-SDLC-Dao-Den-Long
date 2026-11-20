@@ -550,7 +550,11 @@ export class WorldView {
     this.marker.scale.setScalar(1);
   }
 
+  /** PRD v4 §4 "Giảm chuyển động": no flash rings on hits, pulses and lantern changes. */
+  reduceMotion = false;
+
   private burst(at: Vec3, radius: number, color: number, life: number): void {
+    if (this.reduceMotion) return;
     const mesh = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 64), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(at[0], at[1] + 0.08, at[2]);

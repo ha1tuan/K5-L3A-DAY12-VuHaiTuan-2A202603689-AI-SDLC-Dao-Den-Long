@@ -27,6 +27,8 @@
     </header>
 
     <p id="banner" class="banner" role="status" hidden></p>
+    <ul id="cues" class="cues" role="log" aria-live="polite" aria-label="Phụ đề"></ul>
+    <div id="shade-arrows" aria-label="Hướng Bóng Mực ngoài màn hình"></div>
     <div id="arrow" class="arrow" hidden aria-label="Đèn cần thắp hoặc châm dầu gần nhất"></div>
 
     <footer class="hud-bottom">
@@ -51,7 +53,19 @@
           <li>Nhấn <kbd data-key="pulse">E</kbd> để tỏa sáng: 3 đom đóm đổi lấy vài giây xua Bóng Mực và Gió Lạc. Đèn sáng là chỗ trú, nhưng đèn sắp cạn dầu thì Bóng Mực kéo tới hút.</li>
           <li>Đưa chuột ra mép màn hình để nhìn quanh, <kbd data-key="camera">Space</kbd> để quay về Mây, <kbd>Esc</kbd> hoặc <kbd data-key="pause">P</kbd> để tạm dừng.</li>
         </ul>
-        <button id="start" type="button">Bắt đầu Đêm 1</button>
+        <div class="menu-actions">
+          <button id="start" type="button">Bắt đầu Đêm 1</button>
+          <button id="open-board" type="button" class="secondary">Bảng xếp hạng</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="board" class="screen" hidden>
+      <div class="story">
+        <h2>Bảng xếp hạng</h2>
+        <p class="hint board-empty" hidden>Chưa có ai lưu điểm. Hãy là người đầu tiên.</p>
+        <ol class="board-list"></ol>
+        <button id="close-board" type="button">Về menu</button>
       </div>
     </section>
 
@@ -74,6 +88,14 @@
         <h2></h2>
         <p class="reason"></p>
         <dl></dl>
+        <form id="save-score" class="save-score" hidden>
+          <label for="player-name">Lưu điểm vào Bảng xếp hạng</label>
+          <div class="row">
+            <input id="player-name" name="name" maxlength="12" autocomplete="nickname" placeholder="Tên của bạn" />
+            <button type="submit" class="secondary">Lưu</button>
+          </div>
+          <p class="save-msg" role="status">3–12 ký tự: chữ (có dấu cũng được), số hoặc _.</p>
+        </form>
         <button id="again" type="button">Chơi lại</button>
         <p class="hint">hoặc nhấn <kbd data-key="restart">R</kbd></p>
       </div>
@@ -90,6 +112,8 @@
       <label class="slider">Âm lượng <input id="volume" type="range" min="0" max="1" step="0.05" /></label>
       <label class="slider">Độ nhạy chuột <input id="sensitivity" type="range" min="0.5" max="2" step="0.1" /></label>
       <label class="toggle"><input id="colorblind" type="checkbox" /> Bảng màu dễ phân biệt</label>
+      <label class="toggle"><input id="reduce-motion" type="checkbox" /> Giảm chuyển động</label>
+      <label class="toggle"><input id="large-text" type="checkbox" /> Chữ lớn (×1.25)</label>
       <p class="message" role="status"></p>
       <ul></ul>
       <div class="actions">
