@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đảo Đèn Lồng</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="game" tabindex="0" aria-label="Đảo Bến về đêm"></canvas>
+
+    <header class="hud-top">
+      <div class="night" aria-label="Thời gian còn lại của đêm">
+        <div class="track"><span id="moon"></span></div>
+        <span id="clock">5:00</span>
+      </div>
+      <ul id="lantern-string" aria-label="Đèn Lồng Lớn"></ul>
+      <p class="score"><span id="score">0</span> điểm</p>
+    </header>
+
+    <footer class="hud-bottom">
+      <div class="vitals">
+        <ul id="flames" class="flames"></ul>
+        <div class="jar-wrap" aria-label="Đom đóm đang mang">
+          <ul id="jar" class="jar"></ul>
+          <span id="jar-count">0/5</span>
+        </div>
+      </div>
+      <ul id="keys" class="keys" aria-label="Phím"></ul>
+    </footer>
+
+    <section id="title" class="screen">
+      <div class="story">
+        <h1>Đảo Đèn Lồng</h1>
+        <p>Sương đen đã nuốt hết ánh sáng của Đảo Bến. Mây gom đom đóm, mang về thắp lại năm Đèn Lồng Lớn trước khi trời sáng.</p>
+        <ul class="how">
+          <li>Nhấn chuột trái lên mặt đất để Mây chạy tới đó. Đom đóm tự bay vào lọ khi Mây đi ngang.</li>
+          <li>Đứng cạnh đèn và nhấn <kbd data-key="interact">W</kbd> để nạp. Mỗi đèn cần 8 đom đóm.</li>
+          <li>Nhấn <kbd data-key="pulse">E</kbd> để tỏa sáng, đổi 2 đom đóm lấy vài giây xua Bóng Mực. Đèn đã sáng là chỗ trú.</li>
+          <li>Đưa chuột ra mép màn hình để nhìn quanh, <kbd data-key="camera">Space</kbd> để quay về Mây, <kbd>Esc</kbd> để đổi phím.</li>
+        </ul>
+        <button id="start" type="button">Bắt đầu Đêm 1</button>
+      </div>
+    </section>
+
+    <section id="ending" class="screen" hidden>
+      <div class="story">
+        <h2></h2>
+        <p class="reason"></p>
+        <dl></dl>
+        <button id="again" type="button">Chơi lại</button>
+        <p class="hint">hoặc nhấn <kbd data-key="restart">R</kbd></p>
+      </div>
+    </section>
+
+    <dialog id="settings" aria-labelledby="settings-title">
+      <h2 id="settings-title">Phím điều khiển</h2>
+      <p class="message" role="status"></p>
+      <ul></ul>
+      <div class="actions">
+        <button type="button" data-reset>Khôi phục mặc định</button>
+        <button type="button" data-close>Tiếp tục chơi</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="/src/client/main.ts"></script>
+  </body>
+</html>

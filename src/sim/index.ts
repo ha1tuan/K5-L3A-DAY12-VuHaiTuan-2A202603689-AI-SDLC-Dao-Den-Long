@@ -27,3 +27,7 @@ export function createSim(cfg: SimConfig): Sim {
     },
   };
 }
+
+/** Read-only constants the client needs for display (not gameplay inputs). */
+export { CONTRACT_TUNING, secondsToTicks, TICKS_PER_SECOND } from './tuning';
+export { ISLAND_RADIUS } from './world';
