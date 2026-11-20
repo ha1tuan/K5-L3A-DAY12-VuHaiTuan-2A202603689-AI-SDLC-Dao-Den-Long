@@ -105,7 +105,44 @@ Q nhảy, W nạp, E tỏa sáng, R chơi lại, **D lướt**, **Esc/P tạm d�
 - [ ] Headless 1 Đêm đầy đủ ≤ 30 s; ≥ 30 FPS ở 1280×720 trên máy thật
 - [ ] Tag `phase-2` trên repo public
 
-## Phase 3–4: khung (ticket chưa phát hành)
+## Phase 3: Đèn cạn dầu (tag `phase-3`, Test Contract v1.2)
+
+> Nguồn: `PRD_v3.md` (Ticket-03, Change Request). Luật nào PRD v3 không nhắc giữ nguyên Phase 2. Mô hình đèn và thứ tự tick: `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002). Giả định mới: A32–A49 trong `docs/NOTES.md`. Breaking changes: `CHANGELOG.md`.
+
+### Đánh giá tác động lên Phase 2
+
+- **Đèn:** thêm `fuel_ticks` (số nguyên, tối đa 6000), `ever_lit`, `relit_count`; đèn sáng có thể tắt (`lantern_out`), thắp lại chỉ cần 5. Tương tác chọn đèn **nhận được** gần nhất (tắt, hoặc sáng chưa đầy), áp nạp/thắp hoặc châm dầu (`refuel`).
+- **Thứ tự tick đổi** (ADR-0003): bước 2b trừ dầu ngay sau bộ đếm; kiểm tra kết thúc chỉ còn `no_flames` → bình minh (`dawn_survived` hoặc `dawn`). Bỏ `all_lit`.
+- **Bóng Mực:** thêm trạng thái `drain`; `wander` nhắm đèn yếu gần nhất (chọn lại mỗi tick), không có thì đi ngẫu nhiên như A22. Vùng an toàn chỉ còn ở đèn sáng có `fuel ≥ 30`.
+- **Số đổi:** thời lượng 240/270/300 s; sức chứa `min(20, 10 + 2 × successful_lights)`; điểm v1.2 (bỏ thưởng thời gian). Tuning thêm 8 khoá, `contract_version` "1.2".
+- **Headless:** snapshot đèn thêm `fuel` (1 chữ số), `ever_lit`, `relit_count`; `player.capacity`; scenario thêm `lit`/`fuel`/`ever_lit` cho đèn, `player.successful_lights`, `shades[].target_lantern_id`; sự kiện mới `refuel`, `lantern_out`, `fuel_drain`; `lantern_lit.relight`.
+- **Test cũ bị đổi:** mọi test và case dựa vào `all_lit`, thắng sớm, thưởng thời gian, `per_mote` 10, thời lượng 300/330/360, sức chứa cố định 10. Sửa hoặc xoá, ghi lý do trong commit và trong `req` của case.
+- **Client:** thanh dầu trên đèn, nhấp nháy 1 Hz khi yếu; HUD `đang_mang / sức_chứa`; Chuỗi 3 Đêm dùng `dawn_survived`; màn kết thúc tính điểm mới; Cài đặt "Bảng màu dễ phân biệt"; lời Ông Đăng nói về dầu.
+
+### Các mốc
+
+| # | Mốc | Nội dung | Kiểm chứng (viết trước) |
+|---|---|---|---|
+| P3-M0 | Chuẩn bị | Nhánh `feat/phase-3`; commit `PRD_v3.md`, ADR-0003, GLOSSARY, PLAN, NOTES, CHANGELOG, CLAUDE.md; spec Phase 3 trên GitHub Issues | — |
+| P3-M1 | Contract v1.2 + dầu | Tuning và score v1.2; `fuel_ticks`, hao 1/tick, tắt ở bước 2b, `lantern_out`, `ever_lit`; snapshot/scenario đèn v1.2 (thiếu `fuel` → 100) | AC-01, 02, 06, 17 |
+| P3-M2 | Tương tác mới | Chọn đèn nhận được; châm dầu `used = min(mang, ceil((6000 − fuel_ticks)/600))`; thắp lại 5, `relit_count`, `relight`; sức chứa tăng dần; điểm nạp/thắp/thắp lại | AC-03, 04, 05, 07, 16 |
+| P3-M3 | Bóng Mực hút dầu | Đèn yếu mất vùng an toàn; `wander` nhắm đèn yếu; `drain` (≤ 2 m, 5/tick, cộng dồn), `fuel_drain` mỗi 60 tick theo từng Bóng; thoát `drain`; đẩy ra khi châm lên ≥ 30 hoặc thắp lại; +15 khi Tỏa Sáng trúng con đang `drain` | AC-08, 09, 10, 11 |
+| P3-M4 | Luật thắng mới | Thời lượng 240/270/300; không thắng sớm; bình minh xét `ceil(0.6 × tổng)`; thưởng bình minh; `no_flames` ưu tiên ở tick cuối | AC-12, 13, 14, 15 |
+| P3-M5 | Verify | `scenarios/cases.mjs` + `scripts/verify.mjs` cho v1.2; tính lại mọi case Phase 1–2 bị đổi; thử đột biến | `npm run verify` xanh, bằng chứng `docs/evidence/phase-3/` |
+| P3-M6 | Client | Thanh dầu, nhấp nháy 1 Hz, đèn tắt xẹp và rách; HUD sức chứa; Bóng `drain` có hiệu ứng hút; chế độ mù màu (AC-18, test hàm thuần `settingsStore`); âm thanh `refuel`/`lantern_out`; Ông Đăng nói luật mới | Ảnh chụp, test hàm thuần |
+| P3-M7 | Nộp | README, CHANGELOG hoàn chỉnh, NOTES (nhật ký AI, retro), PR, clean clone, tag `phase-3` | Verify xanh ở commit được tag |
+
+**Ranh giới cắt** (cắt từ dưới lên): âm thanh mới → hiệu ứng hút dầu → lời Ông Đăng mới. **Không cắt** sim/headless (P3-M1…M5), chế độ mù màu (có AC-18), changelog, ADR hay bằng chứng.
+
+### Tiêu chí hoàn thành Phase 3
+
+- [x] DoD §9 của `PRD_v3.md` đạt hết, mỗi dòng có bằng chứng trong `docs/evidence/phase-3/`
+- [x] Mỗi AC-01…AC-17 có ít nhất một case headless; AC-18 có test hàm thuần và ảnh chụp
+- [x] Case Phase 1–2 không bị luật mới thay thế vẫn xanh; case bị thay thế đã sửa hoặc xoá có lý do
+- [x] `CHANGELOG.md` liệt kê đủ breaking changes §10
+- [ ] Tag `phase-3` trên repo public
+
+## Phase 4: khung (ticket chưa phát hành)
 
 Mỗi phase lặp lại vòng làm việc sau, khoảng 60 phút:
 

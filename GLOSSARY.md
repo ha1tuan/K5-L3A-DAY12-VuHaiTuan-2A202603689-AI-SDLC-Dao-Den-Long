@@ -19,8 +19,12 @@ _Avoid_: firefly, light orb, đốm sáng (khi nói về code)
 Đom đóm văng ra quanh Mây khi bị chạm, hoặc do Gió Lạc thả lại; chỉ tồn tại trong một thời gian ngắn rồi biến mất.
 
 **Đèn Lồng Lớn** (`lantern`):
-Cột đèn cố định trên đảo (`L1`…`Ln`), được thắp khi nạp đủ đom đóm.
+Cột đèn cố định trên đảo (`L1`…`Ln`), được thắp khi nạp đủ đom đóm; khi sáng thì cháy bằng dầu và có thể tắt lại khi cạn dầu.
 _Avoid_: lamp, beacon
+
+**Đèn yếu**:
+Đèn đang sáng có dầu dưới 30; mất vùng an toàn và bị Bóng Mực nhắm tới để hút dầu.
+_Avoid_: đèn tắt (đèn yếu vẫn đang sáng), low lantern
 
 **Bóng Mực** (`shade`):
 Sinh vật mực đen lơ lửng trong sương, đuổi Mây và gây mất Ngọn Lửa khi chạm.
@@ -45,7 +49,15 @@ Số đom đóm Mây đang giữ, tối đa `carry_capacity`; vừa là nguyên 
 _Avoid_: inventory, light (như một chỉ số riêng)
 
 **Đã nạp** (`deposited`):
-Số đom đóm đã nạp vào một Đèn Lồng Lớn chưa sáng.
+Số đom đóm đã nạp vào một Đèn Lồng Lớn đang tắt; về 0 khi đèn cạn dầu.
+
+**Dầu** (`fuel`):
+Lượng cháy còn lại của một đèn đang sáng, từ 0 tới 100; tự hao theo thời gian và bị Bóng Mực hút. Đèn tắt có dầu 0.
+_Avoid_: nhiên liệu, oil, energy
+
+**Sức chứa** (`capacity`):
+Số đom đóm tối đa Mây mang được; bắt đầu Đêm ở 10, tăng 2 mỗi lần thắp thành công (kể cả thắp lại), tối đa 20.
+_Avoid_: carry_capacity (đó là số khởi điểm trong `tuning`), túi
 
 **Tổng điểm game**:
 Tổng điểm của các Đêm **đã thắng** trong Chuỗi 3 Đêm; điểm của Đêm thua không được tính.
@@ -57,7 +69,23 @@ Chuyển đom đóm đang mang vào Đèn Lồng Lớn gần nhất chưa sáng.
 _Avoid_: feed, charge
 
 **Thắp** (`lantern_lit`):
-Khoảnh khắc một Đèn Lồng Lớn nhận đủ `lantern_cost` và sáng lên.
+Khoảnh khắc một Đèn Lồng Lớn đang tắt nhận đủ đom đóm và sáng lên với dầu đầy. Gồm thắp lần đầu và thắp lại.
+
+**Thắp lại** (`relight: true`):
+Thắp một đèn đã từng sáng rồi cạn dầu; chỉ cần 5 đom đóm.
+_Avoid_: hồi sinh đèn, reignite
+
+**Châm dầu** (`refuel`):
+Nạp đom đóm vào một đèn **đang sáng** để thêm dầu, mỗi đom đóm thêm 10.
+_Avoid_: nạp (nạp là cho đèn đang tắt), recharge
+
+**Cạn dầu** (`lantern_out`):
+Khoảnh khắc dầu của một đèn về 0 và đèn tắt.
+_Avoid_: đèn chết, đèn hỏng
+
+**Hút dầu** (`drain`):
+Trạng thái Bóng Mực đứng sát một đèn yếu và rút dầu của nó.
+_Avoid_: tấn công đèn, ăn đèn
 
 **Tỏa sáng** (`pulse`):
 Mây đốt đom đóm đang mang để làm choáng và đẩy lùi Bóng Mực xung quanh, và xua Gió Lạc.
@@ -90,24 +118,37 @@ Người chơi dừng Đêm lại; mọi thứ trong Đêm đứng yên cho tớ
 ## Không gian & thời gian
 
 **Vùng an toàn** (`safe_radius`):
-Vùng tròn quanh một Đèn Lồng Lớn **đã sáng** mà Bóng Mực không vào được.
-_Avoid_: safe zone quanh đèn chưa sáng
+Vùng tròn quanh một Đèn Lồng Lớn **đang sáng và không yếu** mà Bóng Mực không vào được.
+_Avoid_: safe zone quanh đèn tắt hoặc đèn yếu
 
 **Đêm** (`night`):
-Một màn chơi có giới hạn thời gian trên một hòn đảo: Đêm 1 – Đảo Bến, Đêm 2 – Đảo Cau, Đêm 3 – Đảo Chuông.
+Một màn chơi có giới hạn thời gian trên một hòn đảo: Đêm 1 – Đảo Bến, Đêm 2 – Đảo Cau, Đêm 3 – Đảo Chuông. Đêm chỉ kết thúc ở bình minh hoặc khi hết Ngọn Lửa.
+_Avoid_: Đảo Đôi, Đảo Tháp Chuông (tên sai từng dùng ở client)
 _Avoid_: level, stage
 
 **Chuỗi 3 Đêm**:
 Chơi lần lượt Đêm 1 → 2 → 3; thua thì chơi lại chính Đêm đó.
 _Avoid_: campaign, story mode
 
-**Bình minh** (`dawn`):
-Hết thời gian Đêm mà chưa thắp hết đèn, dẫn đến thua.
+**Bình minh**:
+Thời điểm hết giờ của Đêm; ở đây xét thắng hay thua theo số đèn đang sáng.
 _Avoid_: timeout, Màn Bình Minh
+
+**Sống tới bình minh** (`dawn_survived`):
+Thắng Đêm: tới bình minh Mây còn Ngọn Lửa và số đèn đang sáng ít nhất 60% tổng số đèn (3/5, 4/6, 5/7).
+_Avoid_: thắp hết đèn (không còn là điều kiện thắng), all_lit
+
+**Bình minh đến khi thiếu đèn** (`dawn`):
+Thua Đêm vì tới bình minh số đèn đang sáng dưới ngưỡng.
+_Avoid_: hết giờ (nói chung chung)
 
 **Màn Bình Minh**:
 Màn kết sau khi thắng Đêm 3, hiện Tổng điểm game.
-_Avoid_: Bình minh (đó là lý do thua), ending screen
+_Avoid_: Bình minh (đó là thời điểm xét thắng/thua), ending screen
+
+**Bảng màu dễ phân biệt**:
+Cài đặt dành cho người mù màu; đổi màu Bóng Mực và cảnh báo, và làm đèn tắt/đèn yếu nhận ra được không cần màu.
+_Avoid_: dark mode, high contrast
 
 **Gió mạnh** (`wind`):
 Cơn gió định kỳ ở Đêm 3 đẩy Mây theo một hướng; có báo trước.

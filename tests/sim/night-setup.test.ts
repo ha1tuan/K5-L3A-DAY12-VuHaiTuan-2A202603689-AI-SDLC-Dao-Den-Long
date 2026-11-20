@@ -23,7 +23,7 @@ describe('Đêm 1 – Đảo Bến (bản đồ chuẩn §4.1)', () => {
     expect(s.player.pos).toEqual([0, 0, 0]);
     expect(s.player.flames).toBe(3);
     expect(s.shades).toEqual([]);
-    expect(s.timeLeftS).toBe(300);
+    expect(s.timeLeftS).toBe(240); // v1.2: Night 1 lasts 240 s
   });
 
   it('places 20 motes on 20 different points among the 24 standard spawn points', () => {

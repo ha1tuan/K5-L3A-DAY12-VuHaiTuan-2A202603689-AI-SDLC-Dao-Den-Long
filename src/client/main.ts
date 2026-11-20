@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import { CONTRACT_TUNING, createSim, nightDef, type NightId, type Sim, type SimEvent } from '../sim';
+import { CONTRACT_TUNING, createSim, nightDef, type NightId, type Scenario, type Sim, type SimEvent } from '../sim';
 import { GameAudio } from './audio';
 import { advanceCampaign, startCampaign, type Campaign } from './campaign';
 import { MobaCamera } from './camera';
 import { Hud } from './hud';
 import { Controls } from './input/controls';
 import { KeyBindings, keyLabel } from './input/keybindings';
+import { winTarget } from './lanternLook';
+import { paletteFor } from './lighting';
 import { WorldView } from './scene';
 import { NIGHT_INTROS } from './story';
 import { SettingsPanel } from './settings';
@@ -55,16 +57,18 @@ let phase: Phase = 'title';
 let campaign: Campaign = startCampaign();
 let sim: Sim = createSim({ seed: 1, night: 1 });
 let world = new WorldView(nightDef(1, T));
-let tally = { motes: 0, lanterns: 0, stuns: 0 };
+const emptyTally = () => ({ motes: 0, lanterns: 0, relights: 0, stuns: 0, drainStuns: 0 });
+let tally = emptyTally();
 /** One pause press waiting to reach the sim (Esc/P or the menu's Tiếp tục). */
 let pauseEdge = false;
 
-function loadNight(night: NightId): void {
+function loadNight(night: NightId, scenario?: Scenario): void {
   world.dispose();
   world = new WorldView(nightDef(night, T));
   cam.bounds = world.bounds;
-  sim = createSim({ seed: Math.floor(Math.random() * 2 ** 31), night });
-  tally = { motes: 0, lanterns: 0, stuns: 0 };
+  applyPalette();
+  sim = createSim({ seed: Math.floor(Math.random() * 2 ** 31), night, scenario });
+  tally = emptyTally();
   controls.reset();
   pauseEdge = false;
   audio.reset();
@@ -73,8 +77,8 @@ function loadNight(night: NightId): void {
 }
 
 /** Ông Đăng introduces the night over its island, then the night starts on Vào đêm / Enter. */
-function play(night: NightId): void {
-  loadNight(night);
+function play(night: NightId, scenario?: Scenario): void {
+  loadNight(night, scenario);
   phase = 'intro';
   titleEl.hidden = true;
   endEl.hidden = true;
@@ -107,7 +111,14 @@ function renderHints(): void {
     el.textContent = keyLabel(bindings.all[el.dataset.key as keyof typeof bindings.all]);
   }
 }
+/** PRD v3 §5.6: "Bảng màu dễ phân biệt" recolours the shades and turns UI warnings white with ⚠. */
+function applyPalette(): void {
+  const colorblind = settings.values.colorblind;
+  document.body.classList.toggle('colorblind', colorblind);
+  world.setColorScheme(paletteFor(colorblind));
+}
 settings.onChange = () => {
+  applyPalette();
   hud.renderKeys();
   renderHints();
   cam.sensitivity = settings.values.sensitivity;
@@ -117,6 +128,7 @@ settings.onChange = () => {
 function showEnding(): void {
   const s = sim.state;
   const won = s.status === 'won';
+  const litAtEnd = s.lanterns.filter((l) => l.lit).length;
   const night = campaign.night;
   campaign = advanceCampaign(campaign, { won, score: s.score });
   const h2 = endEl.querySelector('h2') as HTMLElement;
@@ -127,24 +139,29 @@ function showEnding(): void {
     reason.textContent = 'Chuông tháp ngân, sương đen tan vào biển mây. Đảo Đèn Lồng sáng trở lại.';
     button.textContent = 'Chơi lại từ Đêm 1';
   } else if (won) {
-    h2.textContent = `${NIGHT_NAMES[night]} sáng trở lại`;
-    reason.textContent = `Cả ${s.lanterns.length} Đèn Lồng Lớn đã cháy. Gió đưa Mây sang ${NIGHT_NAMES[campaign.night]}.`;
+    h2.textContent = `${NIGHT_NAMES[night]} đón bình minh`;
+    reason.textContent = `Mây giữ ${litAtEnd} trên ${s.lanterns.length} Đèn Lồng Lớn còn sáng tới sáng. Gió đưa Mây sang ${NIGHT_NAMES[campaign.night]}.`;
     button.textContent = `Sang Đêm ${campaign.night}`;
   } else {
     h2.textContent = 'Đêm đã qua';
     reason.textContent =
       s.endReason === 'dawn'
-        ? `Bình minh đến khi mới thắp ${s.lanterns.filter((l) => l.lit).length} trên ${s.lanterns.length} đèn.`
+        ? `Bình minh đến khi chỉ còn ${litAtEnd} trên ${s.lanterns.length} đèn sáng, cần ít nhất ${winTarget(s.lanterns.length)}.`
         : 'Mây đã hết Ngọn Lửa. Bóng Mực phủ kín đảo.';
     button.textContent = `Chơi lại Đêm ${night}`;
   }
-  const earned = tally.motes * T.score.per_mote + tally.lanterns * T.score.per_lantern + tally.stuns * T.score.per_stun;
+  const sc = T.score;
+  const earned =
+    tally.motes * sc.per_mote + tally.lanterns * sc.per_lantern + tally.relights * sc.per_relight + tally.stuns * sc.per_stun + tally.drainStuns * sc.per_stun_drain;
   const rows: [string, string][] = [
-    ['Đom đóm đã nạp', `${tally.motes} × ${T.score.per_mote}`],
-    ['Đèn đã thắp', `${tally.lanterns} × ${T.score.per_lantern}`],
-    ['Bóng Mực bị xua', `${tally.stuns} × ${T.score.per_stun}`],
+    ['Đom đóm đã nạp và châm', `${tally.motes} × ${sc.per_mote}`],
+    ['Đèn thắp lần đầu', `${tally.lanterns} × ${sc.per_lantern}`],
+    ['Đèn thắp lại', `${tally.relights} × ${sc.per_relight}`],
+    ['Bóng Mực bị xua', `${tally.stuns} × ${sc.per_stun}`],
+    ['Bóng Mực đang hút dầu bị xua', `${tally.drainStuns} × ${sc.per_stun_drain}`],
   ];
-  if (won) rows.push(['Thưởng thời gian và lửa còn lại', `${s.score - earned}`]);
+  // PRD v3 §5.5: at dawn, 50 + floor(fuel) per lit lantern and 50 per flame left.
+  if (won) rows.push(['Thưởng bình minh: đèn còn sáng và lửa còn lại', `${s.score - earned}`]);
   rows.push(['Điểm Đêm này', s.score.toLocaleString('vi-VN')]);
   (endEl.querySelector('dl') as HTMLElement).innerHTML =
     rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') +
@@ -158,11 +175,13 @@ function continueAfterEnding(): void {
   else play(campaign.night);
 }
 
-function handleEvents(events: SimEvent[]): void {
+/** draining: ids of the shades that were draining just before this step (a pulse on them is worth more). */
+function handleEvents(events: SimEvent[], draining: Set<string>): void {
   for (const e of events) {
-    if (e.name === 'deposit') tally.motes += e.data.amount;
-    if (e.name === 'lantern_lit') tally.lanterns++;
-    if (e.name === 'pulse') tally.stuns += e.data.stunned_ids.length;
+    if (e.name === 'deposit' || e.name === 'refuel') tally.motes += e.data.amount;
+    if (e.name === 'lantern_lit') e.data.relight ? tally.relights++ : tally.lanterns++;
+    if (e.name === 'pulse')
+      for (const id of e.data.stunned_ids) draining.has(id) ? tally.drainStuns++ : tally.stuns++;
   }
   world.onEvents(events, sim.state);
   audio.onStep(events, sim.state);
@@ -248,7 +267,8 @@ function frame(now: number): void {
       if (sim.state.paused) Object.assign(ctrl, { move: [0, 0], jump: false, interact: false, pulse: false, dash: false });
       ctrl.pause = pauseEdge;
       pauseEdge = false;
-      handleEvents(sim.step(ctrl));
+      const draining = new Set(sim.state.shades.filter((x) => x.state === 'drain').map((x) => x.id));
+      handleEvents(sim.step(ctrl), draining);
       acc -= STEP;
       steps++;
       if (sim.state.status !== 'playing') {
@@ -272,11 +292,27 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
 }
 cam.bounds = world.bounds;
+applyPalette();
 cam.centerOn([0, 0, 0]);
 // Dev shortcut: ?night=2 or ?night=3 jumps straight into that night (campaign starts there).
-const devNight = Number(new URLSearchParams(location.search).get('night'));
+const params = new URLSearchParams(location.search);
+const devNight = Number(params.get('night'));
 if (devNight === 2 || devNight === 3) {
   campaign = { night: devNight, total: 0, finished: false };
   play(devNight);
+}
+// Dev shortcut: ?demo=fuel opens Night 1 mid-way with every Phase 3 lantern look on screen
+// (a low-fuel lantern being drained, a full one, a dark one that burned out, a never-lit one).
+if (params.get('demo') === 'fuel') {
+  play(1, {
+    time_left_s: 95,
+    player: { pos: [3.5, 0, 21], carried: 7, successful_lights: 3 },
+    lanterns: [
+      { id: 'L1', lit: true, fuel: 28, deposited: 10 },
+      { id: 'L2', lit: true, fuel: 88, deposited: 10 },
+      { id: 'L3', lit: false, ever_lit: true, deposited: 2 },
+    ],
+    shades: [{ id: 'S1', pos: [-1.2, 1, 26.5], state: 'drain', target_lantern_id: 'L1' }],
+  });
 }
 requestAnimationFrame(frame);

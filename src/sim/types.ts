@@ -37,22 +37,32 @@ export interface Tuning {
   dash_speed: number;
   dash_duration_s: number;
   dash_cooldown_s: number;
+  fuel_max: number;
+  fuel_decay_per_s: number;
+  fuel_per_mote: number;
+  relight_cost: number;
+  win_ratio: number;
+  drain_per_s: number;
+  low_fuel_threshold: number;
+  capacity_max: number;
   score: {
     per_mote: number;
     per_lantern: number;
+    per_relight: number;
     per_stun: number;
-    per_second_left: number;
+    per_stun_drain: number;
+    per_lantern_at_dawn: number;
     per_flame_left: number;
   };
 }
 
 export type GameStatus = 'playing' | 'won' | 'lost';
-export type EndReason = 'all_lit' | 'dawn' | 'no_flames';
-export type ShadeMode = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+export type EndReason = 'dawn_survived' | 'dawn' | 'no_flames';
+export type ShadeMode = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned' | 'drain';
 export type DrifterMode = 'idle' | 'chase' | 'flee' | 'removed';
 export type MoteKind = 'random' | 'dropped';
 
-/** Validated scenario (Test Contract v1.1). Absent fields keep game defaults. */
+/** Validated scenario (Test Contract v1.2). Absent fields keep game defaults. */
 export interface Scenario {
   player?: {
     pos?: Vec3;
@@ -62,16 +72,17 @@ export interface Scenario {
     dash_cd_ticks?: number;
     pulse_cd_ticks?: number;
     charm_ticks?: number;
+    successful_lights?: number;
   };
   random_motes?: boolean;
   random_shades?: boolean;
   random_drifters?: boolean;
   wind_enabled?: boolean;
   motes?: Vec3[];
-  shades?: { id?: string; pos: Vec3; state?: ShadeMode; state_ticks_left?: number }[];
+  shades?: { id?: string; pos: Vec3; state?: ShadeMode; state_ticks_left?: number; target_lantern_id?: string }[];
   drifters?: { id?: string; pos: Vec3; state?: Exclude<DrifterMode, 'removed'>; stolen?: number }[];
   charms?: { id: string; pos?: Vec3; available?: boolean; respawn_ticks?: number }[];
-  lanterns?: { id: string; pos?: Vec3; deposited?: number; lit?: boolean }[];
+  lanterns?: { id: string; pos?: Vec3; deposited?: number; lit?: boolean; fuel?: number; ever_lit?: boolean }[];
   time_left_s?: number;
 }
 
@@ -84,6 +95,10 @@ export interface Player {
   facing: [number, number];
   flames: number;
   carried: number;
+  /** Lightings and relightings this night (scenario-lit lanterns do not count). */
+  successfulLights: number;
+  /** Carry limit: min(capacity_max, carry_capacity + 2 × successfulLights). */
+  capacity: number;
   invulnTicks: number;
   pulseCooldownTicks: number;
   dashCooldownTicks: number;
@@ -103,6 +118,10 @@ export interface Lantern {
   pos: Vec3;
   lit: boolean;
   deposited: number;
+  /** Fuel in whole 1/60 units (max fuel_max × 60); 0 while unlit. */
+  fuelTicks: number;
+  everLit: boolean;
+  relitCount: number;
 }
 
 export interface Shade {
@@ -115,6 +134,10 @@ export interface Shade {
   pushDir: [number, number];
   wanderTarget: Vec3 | null;
   wanderTicks: number;
+  /** Weak lantern a wandering shade heads for, or the one it drains. */
+  targetLanternId: string | null;
+  /** Ticks drained since entering drain (fuel_drain every 60). */
+  drainTicks: number;
 }
 
 export interface Mote {
@@ -174,7 +197,10 @@ export type SimEvent =
   | Ev<'night_start', { night: NightId }>
   | Ev<'mote_picked', { carried: number }>
   | Ev<'deposit', { lantern_id: string; amount: number; deposited: number }>
-  | Ev<'lantern_lit', { lantern_id: string }>
+  | Ev<'lantern_lit', { lantern_id: string; relight: boolean }>
+  | Ev<'lantern_out', { lantern_id: string }>
+  | Ev<'refuel', { lantern_id: string; amount: number; fuel: number }>
+  | Ev<'fuel_drain', { lantern_id: string; shade_id: string; fuel: number }>
   | Ev<'pulse', { stunned_ids: string[] }>
   | Ev<'player_hit', { by: 'shade'; flames: number; dropped: number } | { by: 'fall'; flames: number; dropped: number; lost: number }>
   | Ev<'shade_spawned', { id: string }>

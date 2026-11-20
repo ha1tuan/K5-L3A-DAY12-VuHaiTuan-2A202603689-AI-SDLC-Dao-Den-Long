@@ -18,13 +18,16 @@ export function pulse(s: SimState, ctx: StepCtx): void {
   const stunned: string[] = [];
   for (const sh of s.shades) {
     if (dist3(center, sh.pos) > t.pulse_radius) continue;
+    // PRD v3 §5.5: a shade caught draining is worth per_stun_drain in total.
+    s.score += sh.state === 'drain' ? t.score.per_stun_drain : t.score.per_stun;
+    sh.targetLanternId = null;
+    sh.drainTicks = 0;
     sh.state = 'stunned';
     sh.stateTicks = secondsToTicks(t.pulse_stun_s);
     sh.pushTicks = PULSE_PUSH_TICKS;
     sh.pushDir = dirXZ(center, sh.pos);
     stunned.push(sh.id);
   }
-  s.score += t.score.per_stun * stunned.length;
   ctx.emit({ name: 'pulse', data: { stunned_ids: stunned } });
 
   // A25: drifters are scared off but give no score.

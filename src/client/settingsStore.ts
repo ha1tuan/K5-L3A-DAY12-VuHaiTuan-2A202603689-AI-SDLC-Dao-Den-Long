@@ -1,13 +1,15 @@
-// F-06: volume and mouse sensitivity, persisted in a Storage passed in (localStorage in the browser).
+// F-06 + PRD v3 §5.6: volume, mouse sensitivity and the accessible palette, persisted in a Storage passed in (localStorage in the browser).
 
 export interface Settings {
   /** 0..1 master volume. */
   volume: number;
   /** 0.5..2: scales edge-pan speed and the wheel zoom step (A18). */
   sensitivity: number;
+  /** "Bảng màu dễ phân biệt" (PRD v3 §5.6, A44). */
+  colorblind: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { volume: 0.7, sensitivity: 1 };
+export const DEFAULT_SETTINGS: Settings = { volume: 0.7, sensitivity: 1, colorblind: false };
 const KEY = 'dao-den-long.settings.v2';
 type Store = Pick<Storage, 'getItem' | 'setItem'> | null;
 
@@ -22,6 +24,7 @@ export function loadSettings(storage: Store): Settings {
     return {
       volume: clampOr(s.volume, 0, 1, DEFAULT_SETTINGS.volume),
       sensitivity: clampOr(s.sensitivity, 0.5, 2, DEFAULT_SETTINGS.sensitivity),
+      colorblind: s.colorblind === true,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

@@ -19,7 +19,7 @@
       <div class="center">
         <div class="night" aria-label="Thời gian còn lại của đêm">
           <div class="track"><span id="moon"></span></div>
-          <span id="clock">5:00</span>
+          <span id="clock">4:00</span>
         </div>
         <ul id="lantern-string" aria-label="Đèn Lồng Lớn"></ul>
       </div>
@@ -27,7 +27,7 @@
     </header>
 
     <p id="banner" class="banner" role="status" hidden></p>
-    <div id="arrow" class="arrow" hidden aria-label="Đèn chưa sáng gần nhất"></div>
+    <div id="arrow" class="arrow" hidden aria-label="Đèn cần thắp hoặc châm dầu gần nhất"></div>
 
     <footer class="hud-bottom">
       <div class="spacer"></div>
@@ -44,11 +44,11 @@
     <section id="title" class="screen">
       <div class="story">
         <h1>Đảo Đèn Lồng</h1>
-        <p>Sương đen đã nuốt ánh sáng của ba hòn đảo. Mây gom đom đóm, thắp lại Đèn Lồng Lớn của từng đảo trước khi trời sáng, qua ba Đêm liền.</p>
+        <p>Sương đen đã nuốt ánh sáng của ba hòn đảo. Mây gom đom đóm, thắp lại Đèn Lồng Lớn và giữ cho đủ đèn còn sáng tới bình minh, qua ba Đêm liền.</p>
         <ul class="how">
           <li>Nhấn chuột trái lên mặt đất để Mây chạy tới. Đom đóm tự bay vào lọ khi Mây đi ngang. Mép đảo không có rào: chạy quá là rơi.</li>
-          <li>Đứng cạnh đèn, nhấn <kbd data-key="interact">W</kbd> để nạp. Mỗi đèn cần 10 đom đóm. <kbd data-key="jump">Q</kbd> để nhảy, <kbd data-key="dash">D</kbd> để lướt.</li>
-          <li>Nhấn <kbd data-key="pulse">E</kbd> để tỏa sáng: 3 đom đóm đổi lấy vài giây xua Bóng Mực và Gió Lạc. Đèn đã sáng là chỗ trú.</li>
+          <li>Đứng cạnh đèn, nhấn <kbd data-key="interact">W</kbd> để nạp. Mỗi đèn cần 10 đom đóm. Đèn sáng hao dầu dần: nạp thêm đom đóm để châm dầu, đèn tắt rồi chỉ cần 5 để thắp lại. <kbd data-key="jump">Q</kbd> để nhảy, <kbd data-key="dash">D</kbd> để lướt.</li>
+          <li>Nhấn <kbd data-key="pulse">E</kbd> để tỏa sáng: 3 đom đóm đổi lấy vài giây xua Bóng Mực và Gió Lạc. Đèn sáng là chỗ trú, nhưng đèn sắp cạn dầu thì Bóng Mực kéo tới hút.</li>
           <li>Đưa chuột ra mép màn hình để nhìn quanh, <kbd data-key="camera">Space</kbd> để quay về Mây, <kbd>Esc</kbd> hoặc <kbd data-key="pause">P</kbd> để tạm dừng.</li>
         </ul>
         <button id="start" type="button">Bắt đầu Đêm 1</button>
@@ -89,6 +89,7 @@
       <h3>Cài đặt</h3>
       <label class="slider">Âm lượng <input id="volume" type="range" min="0" max="1" step="0.05" /></label>
       <label class="slider">Độ nhạy chuột <input id="sensitivity" type="range" min="0.5" max="2" step="0.1" /></label>
+      <label class="toggle"><input id="colorblind" type="checkbox" /> Bảng màu dễ phân biệt</label>
       <p class="message" role="status"></p>
       <ul></ul>
       <div class="actions">

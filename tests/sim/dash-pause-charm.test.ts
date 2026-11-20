@@ -62,7 +62,7 @@ describe('F-05 Tạm dừng', () => {
     run(sim, 50);
     expect(once(sim, { pause: true })).toEqual([{ tick: 53, name: 'resumed', data: {} }]);
     expect(sim.state.simTick).toBe(1);
-    expect(sim.state.timeLeftS).toBeCloseTo(300 - 1 / 60, 9);
+    expect(sim.state.timeLeftS).toBeCloseTo(240 - 1 / 60, 9);
   });
 });
 

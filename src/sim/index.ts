@@ -39,7 +39,7 @@ export function createSim(cfg: SimConfig): Sim {
 }
 
 /** Read-only constants and map data the client needs for display (not gameplay inputs). */
-export { CONTRACT_TUNING, secondsToTicks, TICKS_PER_SECOND } from './tuning';
+export { CONTRACT_TUNING, fuelUnits, isFullFuel, isLowFuel, secondsToTicks, TICKS_PER_SECOND } from './tuning';
 export { nightDef, type NightDef, type BouncePad } from './nights';
 export type { Column } from './terrain';
 export { WIND_EVERY_TICKS, WIND_GUST_TICKS, WIND_WARN_TICKS } from './world';

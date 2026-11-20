@@ -21,4 +21,4 @@ PRD v2 (§3.9) quy định một thứ tự xử lý bắt buộc khác với th
 - Vì bộ đếm giảm trước khi di chuyển, một cooldown đặt ở tick k được giảm lần đầu ở bước k+1.
 - Thứ tự chỉ nằm trong `src/sim/step.ts`. Muốn đổi thứ tự phải viết ADR mới.
 
-Trạng thái: chấp nhận (Phase 2). Thay thế ADR-0001.
+Trạng thái: bị thay bởi ADR-0003 (Phase 3). Trước đó: chấp nhận (Phase 2), thay ADR-0001.

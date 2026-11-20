@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runHeadless } from '../../src/headless/run';
 import { InputTimeline } from '../../src/headless/timeline';
+import { ContractFormatError } from '../../src/headless/parse';
 
 const quiet = { random_motes: false, random_shades: false, random_drifters: false, wind_enabled: false } as const;
 const parse = (lines: string[]) => lines.map((l) => JSON.parse(l));
@@ -36,7 +37,7 @@ describe('runHeadless JSONL output', () => {
       sim_tick: 0,
       state: 'playing',
       night: 1,
-      time_left_s: 300,
+      time_left_s: 240,
       score: 0,
       wind: { active: false, dir_deg: 0 },
       player: {
@@ -45,17 +46,18 @@ describe('runHeadless JSONL output', () => {
         grounded: true,
         flames: 3,
         carried: 0,
+        capacity: 10,
         invuln: false,
         dash_cd_s: 0,
         pulse_cd_s: 0,
         charm_s: 0,
       },
       lanterns: [
-        { id: 'L1', pos: [0, 0, 25], lit: false, deposited: 0 },
-        { id: 'L2', pos: [23.8, 0, 7.7], lit: false, deposited: 0 },
-        { id: 'L3', pos: [14.7, 0, -20.2], lit: false, deposited: 0 },
-        { id: 'L4', pos: [-14.7, 0, -20.2], lit: false, deposited: 0 },
-        { id: 'L5', pos: [-23.8, 0, 7.7], lit: false, deposited: 0 },
+        { id: 'L1', pos: [0, 0, 25], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L2', pos: [23.8, 0, 7.7], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L3', pos: [14.7, 0, -20.2], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L4', pos: [-14.7, 0, -20.2], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L5', pos: [-23.8, 0, 7.7], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
       ],
       shades: [{ id: 'S1', pos: [10, 1, 0], state: 'chase' }],
       motes_active: 1,
@@ -63,6 +65,56 @@ describe('runHeadless JSONL output', () => {
       drifters: [],
       charms: [],
     });
+  });
+
+  it('A34: writes lantern fuel with one decimal, rounding half up from 1/60 units', () => {
+    const fuelAt = (ticks: number) =>
+      parse(runHeadless({ seed: 1, night: 1, scenario: { ...quiet, lanterns: [{ id: 'L1', lit: true, fuel: 50 }] }, timeline: new InputTimeline([]), ticks, snapshotEvery: 1 }))
+        .filter((o) => o.type === 'snapshot')
+        .at(-1).lanterns[0].fuel;
+    expect([fuelAt(0), fuelAt(3), fuelAt(4), fuelAt(60)]).toEqual([50, 50, 49.9, 49]);
+  });
+
+  it('AC-03: writes refuel.fuel with one decimal', () => {
+    const out = parse(
+      runHeadless({
+        seed: 1,
+        night: 1,
+        scenario: { ...quiet, player: { pos: [0, 0, 23], carried: 4 }, lanterns: [{ id: 'L1', lit: true, fuel: 37.5 }] },
+        timeline: new InputTimeline([{ tick: 0, interact: true }]),
+        ticks: 1,
+        snapshotEvery: 10,
+      }),
+    );
+    expect(out.find((o) => o.name === 'refuel')).toEqual({ type: 'event', tick: 1, name: 'refuel', data: { lantern_id: 'L1', amount: 4, fuel: 77.5 } });
+  });
+
+  it('writes fuel_drain.fuel with one decimal and the drain state in snapshots', () => {
+    const out = parse(
+      runHeadless({
+        seed: 1,
+        night: 1,
+        scenario: { ...quiet, lanterns: [{ id: 'L1', lit: true, fuel: 25 }], shades: [{ id: 'S1', pos: [0, 1, 23.5], state: 'drain', target_lantern_id: 'L1' }] },
+        timeline: new InputTimeline([]),
+        ticks: 60,
+        snapshotEvery: 60,
+      }),
+    );
+    expect(out.find((o) => o.name === 'fuel_drain')).toEqual({ type: 'event', tick: 60, name: 'fuel_drain', data: { lantern_id: 'L1', shade_id: 'S1', fuel: 19 } });
+    expect(out.find((o) => o.type === 'snapshot' && o.tick === 60).shades[0].state).toBe('drain');
+  });
+
+  it('A42: a target_lantern_id that is not a lantern of the night is a format error (exit 2)', () => {
+    const cfg = (id: string) => ({
+      seed: 1,
+      night: 1 as const,
+      scenario: { ...quiet, shades: [{ pos: [0, 1, 0] as [number, number, number], state: 'drain' as const, target_lantern_id: id }] },
+      timeline: new InputTimeline([]),
+      ticks: 1,
+      snapshotEvery: 10,
+    });
+    expect(() => runHeadless(cfg('L6'))).toThrow(ContractFormatError);
+    expect(() => runHeadless(cfg('L5'))).not.toThrow();
   });
 
   it('reports drifters, charms and cooldowns in seconds (Night 2)', () => {

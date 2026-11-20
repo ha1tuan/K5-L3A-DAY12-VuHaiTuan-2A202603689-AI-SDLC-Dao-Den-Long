@@ -23,20 +23,20 @@ describe('Nhặt đom đóm (§3.3)', () => {
 });
 
 describe('Nạp và thắp đèn (§3.4)', () => {
-  it('deposits min(carried, missing) into the nearest unlit lantern within 2.0 m, scoring 10 per mote', () => {
+  it('deposits min(carried, missing) into the nearest unlit lantern within 2.0 m, scoring 5 per mote (v1.2)', () => {
     const sim = quietSim({ player: { pos: [0, 0, 23], carried: 7 } });
     expect(press(sim, 'interact')).toEqual([{ tick: 1, name: 'deposit', data: { lantern_id: 'L1', amount: 7, deposited: 7 } }]);
-    expect(sim.state.score).toBe(70);
+    expect(sim.state.score).toBe(35);
   });
 
-  it('lights at 10 deposited (+100) and keeps the rest', () => {
+  it('lights at 10 deposited (+100) and keeps the rest; a first lighting is relight: false', () => {
     const sim = quietSim({ player: { pos: [0, 0, 23], carried: 5 }, lanterns: [{ id: 'L1', deposited: 7 }] });
     expect(press(sim, 'interact')).toEqual([
       { tick: 1, name: 'deposit', data: { lantern_id: 'L1', amount: 3, deposited: 10 } },
-      { tick: 1, name: 'lantern_lit', data: { lantern_id: 'L1' } },
+      { tick: 1, name: 'lantern_lit', data: { lantern_id: 'L1', relight: false } },
     ]);
     expect(sim.state.player.carried).toBe(2);
-    expect(sim.state.score).toBe(130);
+    expect(sim.state.score).toBe(115);
   });
 
   it('picks the lower id when two unlit lanterns are equally close', () => {
@@ -63,17 +63,8 @@ describe('Kết thúc Đêm (§3.7, ADR-0002)', () => {
       ...extra,
     });
 
-  it('wins by lighting the last lantern: 10 + 100 + 2·floor(299.98) + 50·3 = 858', () => {
-    const sim = lastLantern();
-    expect(once(sim, { interact: true }).at(-1)).toEqual({ tick: 1, name: 'game_over', data: { result: 'won', reason: 'all_lit' } });
-    expect(sim.state.score).toBe(858);
-  });
-
-  it('still wins when the last lantern is lit on the very tick the night ends', () => {
-    const sim = lastLantern({ time_left_s: 1 / 60 });
-    expect(once(sim, { interact: true }).at(-1)?.data).toEqual({ result: 'won', reason: 'all_lit' });
-    expect(sim.state.score).toBe(260);
-  });
+  // PRD v3 R3: lighting every lantern no longer ends the night (all_lit removed). The two all_lit win
+  // tests that stood here were deleted; the dawn win rule is covered in tests/sim/dawn.test.ts.
 
   it('losing the last flame always loses, even on the tick the last lantern is lit', () => {
     // safe_radius 0 so the shade next to the lantern is not made harmless by the light itself

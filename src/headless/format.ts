@@ -1,4 +1,4 @@
-// The ONLY place that knows the Test Contract v1.1 JSONL shapes (PRD v2 §6).
+// The ONLY place that knows the Test Contract v1.2 JSONL shapes (PRD v2 §6, PRD v3 §6).
 import { TICKS_PER_SECOND, type SimEvent, type SimState, type Vec3 } from '../sim';
 
 const r3 = (n: number): number => {
@@ -7,6 +7,8 @@ const r3 = (n: number): number => {
 };
 const v3 = (p: Vec3): Vec3 => [r3(p[0]), r3(p[1]), r3(p[2])];
 const secs = (ticks: number) => r3(ticks / TICKS_PER_SECOND);
+/** A34: fuel units (1/60) to fuel with one decimal, rounded half up. */
+const fuel1 = (units: number) => Math.round(units / 6) / 10;
 
 export function snapshotLine(s: Readonly<SimState>): string {
   const p = s.player;
@@ -25,12 +27,21 @@ export function snapshotLine(s: Readonly<SimState>): string {
       grounded: p.grounded,
       flames: p.flames,
       carried: p.carried,
+      capacity: p.capacity,
       invuln: p.invulnTicks > 0,
       dash_cd_s: secs(p.dashCooldownTicks),
       pulse_cd_s: secs(p.pulseCooldownTicks),
       charm_s: secs(p.charmTicks),
     },
-    lanterns: s.lanterns.map((l) => ({ id: l.id, pos: v3(l.pos), lit: l.lit, deposited: l.deposited })),
+    lanterns: s.lanterns.map((l) => ({
+      id: l.id,
+      pos: v3(l.pos),
+      lit: l.lit,
+      deposited: l.deposited,
+      fuel: fuel1(l.fuelTicks),
+      ever_lit: l.everLit,
+      relit_count: l.relitCount,
+    })),
     shades: s.shades.map((x) => ({ id: x.id, pos: v3(x.pos), state: x.state })),
     motes_active: s.motes.length,
     motes: s.motes.map((m) => ({ id: m.id, pos: v3(m.pos), kind: m.kind, ttl_s: m.ttlTicks === null ? null : secs(m.ttlTicks) })),
@@ -39,8 +50,14 @@ export function snapshotLine(s: Readonly<SimState>): string {
   });
 }
 
+/** Events carrying fuel get it with one decimal, like the snapshot. */
+function eventData(e: SimEvent): unknown {
+  if (e.name === 'refuel' || e.name === 'fuel_drain') return { ...e.data, fuel: fuel1(Math.round(e.data.fuel * TICKS_PER_SECOND)) };
+  return e.data;
+}
+
 export function eventLine(e: SimEvent): string {
-  return JSON.stringify({ type: 'event', tick: e.tick, name: e.name, data: e.data });
+  return JSON.stringify({ type: 'event', tick: e.tick, name: e.name, data: eventData(e) });
 }
 
 export function endLine(s: Readonly<SimState>): string {

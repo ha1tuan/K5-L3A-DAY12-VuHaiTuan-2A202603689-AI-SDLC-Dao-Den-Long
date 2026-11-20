@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// End-to-end verification against the REAL headless binary (Test Contract v1.1).
+// End-to-end verification against the REAL headless binary (Test Contract v1.2).
 // Writes evidence to docs/evidence/<phase>/ and exits non-zero if anything fails.
 //
-//   node scripts/verify.mjs [--phase phase-2] [--only <case-name>]
+//   node scripts/verify.mjs [--phase phase-3] [--only <case-name>]
 //
 // Requires `npm run build` first (npm run verify does both).
 
@@ -18,15 +18,15 @@ const arg = (k, d) => {
   const i = process.argv.indexOf(k);
   return i > 0 ? process.argv[i + 1] : d;
 };
-const PHASE = arg('--phase', 'phase-2');
+const PHASE = arg('--phase', 'phase-3');
 const ONLY = arg('--only', null);
 const EVIDENCE = join(ROOT, 'docs', 'evidence', PHASE);
 const OUT = join(EVIDENCE, 'out');
 const contract = JSON.parse(readFileSync(join(ROOT, 'game.contract.json'), 'utf8'));
 const HEADLESS = contract.headless_cmd.split(' ');
 
-const EVENT_NAMES = new Set(['night_start', 'mote_picked', 'deposit', 'lantern_lit', 'pulse', 'player_hit', 'shade_spawned', 'dash', 'charm_picked', 'drifter_steal', 'drifter_drop', 'paused', 'resumed', 'game_over']);
-const SHADE_STATES = ['spawning', 'wander', 'chase', 'recoil', 'stunned'];
+const EVENT_NAMES = new Set(['night_start', 'mote_picked', 'deposit', 'lantern_lit', 'pulse', 'player_hit', 'shade_spawned', 'dash', 'charm_picked', 'drifter_steal', 'drifter_drop', 'paused', 'resumed', 'game_over', 'refuel', 'lantern_out', 'fuel_drain']);
+const SHADE_STATES = ['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'];
 const DRIFTER_STATES = ['idle', 'chase', 'flee', 'removed'];
 const DURATION = { 1: contract.tuning.night1_duration_s, 2: contract.tuning.night2_duration_s, 3: contract.tuning.night3_duration_s };
 const KEEP_FULL_OUTPUT_LINES = 400; // larger outputs are kept as head/tail + sha256
@@ -74,7 +74,12 @@ function contractChecks(lines, c) {
       if (l.sim_tick > l.tick || (l.sim_tick !== l.tick && !c.inputs)) errs.push(`sim_tick ${l.sim_tick} vs tick ${l.tick}`);
       if (!['playing', 'paused', 'won', 'lost'].includes(l.state)) errs.push(`bad state ${l.state}`);
       if (l.night !== (c.night ?? 1)) errs.push(`snapshot night ${l.night}`);
-      for (const k of ['vel', 'grounded', 'invuln', 'dash_cd_s', 'pulse_cd_s', 'charm_s']) if (!(k in l.player)) errs.push(`player.${k} missing`);
+      for (const k of ['vel', 'grounded', 'invuln', 'dash_cd_s', 'pulse_cd_s', 'charm_s', 'capacity']) if (!(k in l.player)) errs.push(`player.${k} missing`);
+      for (const ln of l.lanterns) {
+        for (const k of ['fuel', 'ever_lit', 'relit_count']) if (!(k in ln)) errs.push(`lantern ${ln.id}.${k} missing`);
+        if (Math.round(ln.fuel * 10) / 10 !== ln.fuel) errs.push(`lantern ${ln.id} fuel ${ln.fuel} not rounded to 1 decimal`);
+        if (!ln.lit && ln.fuel !== 0) errs.push(`dark lantern ${ln.id} has fuel ${ln.fuel}`);
+      }
       for (const k of ['motes', 'drifters', 'charms']) if (!Array.isArray(l[k])) errs.push(`${k} array missing`);
       if (typeof l.wind?.active !== 'boolean' || typeof l.wind?.dir_deg !== 'number') errs.push('wind {active, dir_deg} missing');
       const onCadence = l.tick % every === 0;
@@ -161,15 +166,19 @@ function staticSimScan() {
 // PRD v2 §6.1: the standard numbers are fixed; game.contract.json must declare exactly these.
 const STANDARD_TUNING = {
   player_speed: 6, carry_capacity: 10, lantern_cost: 10, lantern_count_night1: 5, pickup_radius: 1, interact_radius: 2,
-  pulse_cost: 3, pulse_radius: 5, night1_duration_s: 300, night2_duration_s: 330, night3_duration_s: 360, flames: 3,
+  pulse_cost: 3, pulse_radius: 5, night1_duration_s: 240, night2_duration_s: 270, night3_duration_s: 300, flames: 3,
   invuln_s: 1.5, hit_drop_ratio: 0.5, pulse_stun_s: 2, pulse_push_m: 4, pulse_cooldown_s: 3, safe_radius: 6,
   shade_speed: 4, shade_hit_radius: 1, fall_enabled: true, dash_speed: 14, dash_duration_s: 0.2, dash_cooldown_s: 1.5,
-  score: { per_mote: 10, per_lantern: 100, per_stun: 5, per_second_left: 2, per_flame_left: 50 },
+  // v1.2 (PRD v3 §6)
+  fuel_max: 100, fuel_decay_per_s: 1, fuel_per_mote: 10, relight_cost: 5, win_ratio: 0.6, drain_per_s: 5,
+  low_fuel_threshold: 30, capacity_max: 20,
+  score: { per_mote: 5, per_lantern: 100, per_relight: 40, per_stun: 5, per_stun_drain: 15, per_lantern_at_dawn: 50, per_flame_left: 50 },
 };
 
 function tuningChecks() {
   const errs = [];
-  if (contract.contract_version !== '1.1') errs.push('contract_version must be "1.1"');
+  if (contract.contract_version !== '1.2') errs.push('contract_version must be "1.2"');
+  if ('per_second_left' in contract.tuning.score) errs.push('score.per_second_left was removed in v1.2');
   const m = partialMismatch(contract.tuning, STANDARD_TUNING, 'tuning');
   if (m) errs.push(m);
   return errs;
@@ -192,7 +201,7 @@ const record = (name, req, ok, detail, extra = {}) => {
 const staticErrs = staticSimScan();
 record('static-sim-purity', 'Architect §7: src/sim has no three/DOM/Node/Math.random/clock', staticErrs.length === 0, staticErrs.join('\n') || 'clean');
 const tuningErrs = tuningChecks();
-record('contract-file', 'v1.1 §6.1: game.contract.json has version 1.1 and exactly the standard tuning', tuningErrs.length === 0, tuningErrs.join('\n') || 'complete');
+record('contract-file', 'v1.2 (PRD v3 §6): game.contract.json has version 1.2 and the standard tuning', tuningErrs.length === 0, tuningErrs.join('\n') || 'complete');
 
 for (const c of cases.filter((x) => !ONLY || x.name === ONLY)) {
   const fileA = join(OUT, `${c.name}.jsonl`);
