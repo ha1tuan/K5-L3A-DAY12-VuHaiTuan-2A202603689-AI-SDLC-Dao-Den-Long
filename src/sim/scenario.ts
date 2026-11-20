@@ -1,4 +1,4 @@
-import { fuelUnits, TICKS_PER_SECOND } from './tuning';
+import { capacityFor, fuelUnits, TICKS_PER_SECOND } from './tuning';
 import { CHARM_RESPAWN_TICKS, DRIFTER_FLEE_TICKS, INITIAL_MOTES } from './world';
 import { defaultStateTicks, emptyMotePoints, makeDrifter, makeMote, makeShade, nextId } from './systems/spawn';
 import type { IdCounters } from './systems/context';
@@ -95,6 +95,8 @@ export function buildInitialState(def: NightDef, tuning: Tuning, rng: () => numb
       facing: [...def.startFacing],
       flames: sc.player?.flames ?? tuning.flames,
       carried: sc.player?.carried ?? 0,
+      successfulLights: sc.player?.successful_lights ?? 0,
+      capacity: capacityFor(tuning, sc.player?.successful_lights ?? 0),
       invulnTicks: sc.player?.invuln_ticks ?? 0,
       pulseCooldownTicks: sc.player?.pulse_cd_ticks ?? 0,
       dashCooldownTicks: sc.player?.dash_cd_ticks ?? 0,

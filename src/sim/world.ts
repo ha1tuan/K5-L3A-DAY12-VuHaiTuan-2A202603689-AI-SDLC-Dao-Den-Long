@@ -40,6 +40,9 @@ export const WANDER_REPICK_TICKS = 180;
 /** A23: push-out speed for shades caught inside a newly lit safe zone, m per tick. */
 export const SAFE_PUSH_PER_TICK = 0.2;
 
+/** A47 / PRD v3 §5.4: carry capacity grows by this much per successful lighting. */
+export const CAPACITY_PER_LIGHT = 2;
+
 export const CHARM_TICKS = 600;
 export const CHARM_SPEED = 7.2;
 export const CHARM_RESPAWN_TICKS = 2700;

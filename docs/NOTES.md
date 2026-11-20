@@ -116,6 +116,7 @@ Nguồn: `PRD_v3.md` (Ticket-03 "Đèn cạn dầu", Test Contract v1.2). Luật
 | A45 | Test cũ, changelog, bằng chứng | Test sim/headless và case verify bị luật mới làm sai (`all_lit`, thời lượng, điểm, thưởng thời gian, sức chứa cố định) được sửa hoặc xoá kèm lý do trong commit và `req`. `CHANGELOG.md` ở gốc. Bằng chứng ở `docs/evidence/phase-3/` |
 | A46 | Thưởng bình minh `floor(fuel)` | Tính từ dầu chính xác: `floor(fuel_ticks / 60)` bằng số nguyên trong sim, không dùng giá trị đã làm tròn để xuất (5999 → 99, không phải 100) |
 | A47 | Bước tăng sức chứa | Số gốc lấy từ `carry_capacity` (10), trần từ `capacity_max` (20). Bước `+2` mỗi lần thắp là hằng số thế giới `CAPACITY_PER_LIGHT` trong `world.ts`, không thêm khoá lạ vào `tuning` của contract |
+| A48 | Đèn đầy dầu (AC-05) | Dầu trừ ở bước 2b trước bước tương tác, nên đèn `fuel = 100` lúc nhấn đã còn 5999. Đèn coi là **đầy** khi `fuel` xuất ra là 100.0, tức `fuel_ticks ≥ 5997`; đèn đầy không nhận được. Ngoài ra `used` vẫn tính `ceil` trên số chính xác (AC-04 vẫn ra 1) |
 
 ### Nhật ký dùng AI
 

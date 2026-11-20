@@ -1,39 +1,69 @@
 import { distXZ, dirXZ } from '../geometry';
 import { SAFE_PUSH_PER_TICK } from '../world';
-import { fuelUnits } from '../tuning';
+import { capacityFor, fuelUnits, isFullFuel, TICKS_PER_SECOND } from '../tuning';
 import type { Lantern, SimState, Vec3 } from '../types';
 import type { StepCtx } from './context';
 
-/** Step 5: on an interact edge, deposit min(carried, missing) into the nearest unlit lantern (ties → lower id). */
+/** A lantern can take motes when dark, or lit and not full (A48). */
+const receivable = (l: Lantern, fuelMax: number) => !l.lit || !isFullFuel(l.fuelTicks, fuelMax);
+
+/**
+ * Step 5 (A40): on an interact edge, act on the nearest receivable lantern within interact_radius (ties → lower id).
+ * A dark lantern takes deposits and lights at lantern_cost (relight_cost once ever lit); a lit one is refuelled.
+ */
 export function interactWithLantern(s: SimState, ctx: StepCtx): void {
   const p = s.player;
   if (!ctx.edges.interact || p.carried <= 0 || p.respawnTicks > 0) return;
-  const { interact_radius, lantern_cost, score } = ctx.tuning;
+  const t = ctx.tuning;
 
   let target: Lantern | null = null;
   let best = Infinity;
   for (const l of s.lanterns) {
     const d = distXZ(p.pos, l.pos);
-    if (!l.lit && d <= interact_radius && d < best) {
+    if (receivable(l, t.fuel_max) && d <= t.interact_radius && d < best) {
       best = d;
       target = l;
     }
   }
   if (!target) return;
+  if (target.lit) refuel(s, ctx, target);
+  else deposit(s, ctx, target);
+}
 
-  const amount = Math.min(p.carried, lantern_cost - target.deposited);
+function refuel(s: SimState, ctx: StepCtx, l: Lantern): void {
+  const p = s.player;
+  const t = ctx.tuning;
+  const max = fuelUnits(t.fuel_max);
+  const perMote = fuelUnits(t.fuel_per_mote);
+  const used = Math.min(p.carried, Math.ceil((max - l.fuelTicks) / perMote));
+  if (used <= 0) return;
+  p.carried -= used;
+  l.fuelTicks = Math.min(max, l.fuelTicks + used * perMote);
+  s.score += t.score.per_mote * used;
+  ctx.emit({ name: 'refuel', data: { lantern_id: l.id, amount: used, fuel: l.fuelTicks / TICKS_PER_SECOND } });
+}
+
+function deposit(s: SimState, ctx: StepCtx, l: Lantern): void {
+  const p = s.player;
+  const t = ctx.tuning;
+  const relight = l.everLit;
+  const cost = relight ? t.relight_cost : t.lantern_cost;
+  const amount = Math.min(p.carried, cost - l.deposited);
   if (amount <= 0) return;
   p.carried -= amount;
-  target.deposited += amount;
-  s.score += score.per_mote * amount;
-  ctx.emit({ name: 'deposit', data: { lantern_id: target.id, amount, deposited: target.deposited } });
-  if (target.deposited >= lantern_cost) {
-    target.lit = true;
-    target.everLit = true;
-    target.fuelTicks = fuelUnits(ctx.tuning.fuel_max);
-    s.score += score.per_lantern;
-    ctx.emit({ name: 'lantern_lit', data: { lantern_id: target.id, relight: false } });
-  }
+  l.deposited += amount;
+  s.score += t.score.per_mote * amount;
+  ctx.emit({ name: 'deposit', data: { lantern_id: l.id, amount, deposited: l.deposited } });
+  if (l.deposited < cost) return;
+
+  l.lit = true;
+  l.everLit = true;
+  l.fuelTicks = fuelUnits(t.fuel_max);
+  if (relight) l.relitCount += 1;
+  s.score += relight ? t.score.per_relight : t.score.per_lantern;
+  p.successfulLights += 1;
+  p.capacity = capacityFor(t, p.successfulLights);
+  ctx.emit({ name: 'lantern_lit', data: { lantern_id: l.id, relight } });
 }
 
 /** The lit lantern whose safe zone strictly contains p, if any. */

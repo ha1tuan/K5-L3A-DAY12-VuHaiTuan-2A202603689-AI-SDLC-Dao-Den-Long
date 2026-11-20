@@ -27,6 +27,7 @@ export function snapshotLine(s: Readonly<SimState>): string {
       grounded: p.grounded,
       flames: p.flames,
       carried: p.carried,
+      capacity: p.capacity,
       invuln: p.invulnTicks > 0,
       dash_cd_s: secs(p.dashCooldownTicks),
       pulse_cd_s: secs(p.pulseCooldownTicks),
@@ -49,8 +50,14 @@ export function snapshotLine(s: Readonly<SimState>): string {
   });
 }
 
+/** Events carrying fuel get it with one decimal, like the snapshot. */
+function eventData(e: SimEvent): unknown {
+  if (e.name === 'refuel') return { ...e.data, fuel: fuel1(Math.round(e.data.fuel * TICKS_PER_SECOND)) };
+  return e.data;
+}
+
 export function eventLine(e: SimEvent): string {
-  return JSON.stringify({ type: 'event', tick: e.tick, name: e.name, data: e.data });
+  return JSON.stringify({ type: 'event', tick: e.tick, name: e.name, data: eventData(e) });
 }
 
 export function endLine(s: Readonly<SimState>): string {

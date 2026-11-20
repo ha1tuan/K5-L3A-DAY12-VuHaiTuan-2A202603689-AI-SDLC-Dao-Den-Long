@@ -77,6 +77,7 @@ export function parseScenario(json: unknown): Scenario {
       dash_cd_ticks: int(p.dash_cd_ticks, 'player.dash_cd_ticks'),
       pulse_cd_ticks: int(p.pulse_cd_ticks, 'player.pulse_cd_ticks'),
       charm_ticks: int(p.charm_ticks, 'player.charm_ticks'),
+      successful_lights: int(p.successful_lights, 'player.successful_lights'),
     };
   }
   sc.random_motes = bool(json.random_motes, 'random_motes');

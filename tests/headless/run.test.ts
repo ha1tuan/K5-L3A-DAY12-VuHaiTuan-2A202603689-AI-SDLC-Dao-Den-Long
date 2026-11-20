@@ -45,6 +45,7 @@ describe('runHeadless JSONL output', () => {
         grounded: true,
         flames: 3,
         carried: 0,
+        capacity: 10,
         invuln: false,
         dash_cd_s: 0,
         pulse_cd_s: 0,
@@ -71,6 +72,20 @@ describe('runHeadless JSONL output', () => {
         .filter((o) => o.type === 'snapshot')
         .at(-1).lanterns[0].fuel;
     expect([fuelAt(0), fuelAt(3), fuelAt(4), fuelAt(60)]).toEqual([50, 50, 49.9, 49]);
+  });
+
+  it('AC-03: writes refuel.fuel with one decimal', () => {
+    const out = parse(
+      runHeadless({
+        seed: 1,
+        night: 1,
+        scenario: { ...quiet, player: { pos: [0, 0, 23], carried: 4 }, lanterns: [{ id: 'L1', lit: true, fuel: 37.5 }] },
+        timeline: new InputTimeline([{ tick: 0, interact: true }]),
+        ticks: 1,
+        snapshotEvery: 10,
+      }),
+    );
+    expect(out.find((o) => o.name === 'refuel')).toEqual({ type: 'event', tick: 1, name: 'refuel', data: { lantern_id: 'L1', amount: 4, fuel: 77.5 } });
   });
 
   it('reports drifters, charms and cooldowns in seconds (Night 2)', () => {

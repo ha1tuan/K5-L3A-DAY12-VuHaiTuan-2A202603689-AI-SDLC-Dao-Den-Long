@@ -72,6 +72,7 @@ export interface Scenario {
     dash_cd_ticks?: number;
     pulse_cd_ticks?: number;
     charm_ticks?: number;
+    successful_lights?: number;
   };
   random_motes?: boolean;
   random_shades?: boolean;
@@ -94,6 +95,10 @@ export interface Player {
   facing: [number, number];
   flames: number;
   carried: number;
+  /** Lightings and relightings this night (scenario-lit lanterns do not count). */
+  successfulLights: number;
+  /** Carry limit: min(capacity_max, carry_capacity + 2 × successfulLights). */
+  capacity: number;
   invulnTicks: number;
   pulseCooldownTicks: number;
   dashCooldownTicks: number;
@@ -190,6 +195,7 @@ export type SimEvent =
   | Ev<'deposit', { lantern_id: string; amount: number; deposited: number }>
   | Ev<'lantern_lit', { lantern_id: string; relight: boolean }>
   | Ev<'lantern_out', { lantern_id: string }>
+  | Ev<'refuel', { lantern_id: string; amount: number; fuel: number }>
   | Ev<'pulse', { stunned_ids: string[] }>
   | Ev<'player_hit', { by: 'shade'; flames: number; dropped: number } | { by: 'fall'; flames: number; dropped: number; lost: number }>
   | Ev<'shade_spawned', { id: string }>
