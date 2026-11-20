@@ -1,6 +1,6 @@
 # Kế hoạch phát triển: Đảo Đèn Lồng
 
-> Nguồn yêu cầu: `PRD.md` (PRD-0 + Test Contract v1.0). Giả định đã chốt: `docs/NOTES.md`. Thuật ngữ: `GLOSSARY.md`.
+> Nguồn yêu cầu: `PRD.md` (Phase 1, Test Contract v1.0), `PRD_v2.md` (Phase 2, Test Contract v1.1). Giả định đã chốt: `docs/NOTES.md`. Thuật ngữ: `GLOSSARY.md`.
 > Ưu tiên: **đúng Test Contract và có bằng chứng** > chơi được > đẹp > sáng tạo.
 
 ## Chiến lược chung
@@ -55,7 +55,57 @@ Mỗi scenario gồm `scenarios/<tên>.json`, `inputs/<tên>.json` (nếu cần)
 - [ ] Chơi tay được từ đầu tới thắng và thua, chơi lại được
 - [ ] Tag `phase-1` trên repo public trước mốc 1h
 
-## Phase 2–4: khung (ticket chưa phát hành)
+## Phase 2: Ba hòn đảo (tag `phase-2`, Test Contract v1.1)
+
+> Nguồn: `PRD_v2.md`. Số chuẩn (§3), bản đồ chuẩn (§4) và contract v1.1 (§6) là **bất biến**, không tự chọn lại. Thứ tự trong một tick: `docs/adr/0002-tick-step-order-v1-1.md` (thay ADR-0001). Giả định mới: A15–A28 trong `docs/NOTES.md`.
+
+### Đánh giá tác động lên Phase 1
+
+- **Tuning đổi gần hết:** carry 10, lantern_cost 10, interact 2.0, pulse 3 / 5 m (đo **3D** từ chân + 0.8 m) / hồi 3 s, stun 2 s, per_stun 5, `fall_enabled: true`, thêm `night2/3_duration_s` và `dash_*`. Mọi kỳ vọng trong `scenarios/cases.mjs` phải tính tay lại; case nào sửa thì ghi lý do ngay trong case.
+- **Thứ tự tick đổi** (ADR-0002): bộ đếm giảm trước khi di chuyển, Tỏa Sáng chạy sau nạp đèn và cập nhật vùng an toàn, kiểm tra kết thúc theo thứ tự `no_flames` → `all_lit` → `dawn`.
+- **Đêm 1 chuẩn hoá:**
+  - Đom đóm: 24 điểm sinh cố định, 20 con lúc đầu, cứ 240 tick sinh thêm 1 nếu còn < 30.
+  - Bóng Mực: 12 điểm sinh r = 37 m, cách Mây ≥ 15 m, 2 con ở tick 300 rồi cứ 480 tick thêm 1, tối đa 6.
+  - Mép đảo không còn tường: ra khỏi đảo là rơi.
+- **Sim:**
+  - `createSim` nhận `night: 1 | 2 | 3`.
+  - State thêm vận tốc, `grounded`, hướng quay mặt, các bộ đếm Lướt/bùa, `simTick`, `paused`, `drifters`, `charms`, `wind`; đom đóm có `kind` và `ttl`.
+  - Bóng Mực dùng đủ 5 trạng thái `spawning`/`wander`/`chase`/`recoil`/`stunned`.
+- **Module mới bên trong sim:**
+  - `terrain`: mặt đất theo từng Đêm, bước lên tối đa 0.3 m, vách, vật cản, bục nhảy.
+  - `nights/` chứa dữ liệu bản đồ của từng Đêm.
+  - Hai module này vẫn nằm sau `index.ts`, không export ra ngoài.
+- **Headless:** `--night 1|2|3`, input `dash`/`pause`, scenario v1.1 (`drifters`/`charms` **thay thế** danh sách mặc định), snapshot v1.1, các sự kiện mới, `player_hit.lost`.
+
+### Các mốc
+
+| # | Mốc | Nội dung | Kiểm chứng (viết trước) |
+|---|---|---|---|
+| P2-M0 | Chuẩn bị | Nhánh `feat/phase-2`; commit `PRD_v2.md`, ADR-0002, GLOSSARY, PLAN, NOTES; spec Phase 2 trên GitHub Issues | — |
+| P2-M1 | Số chuẩn + contract v1.1 + Đêm 1 chuẩn hoá | `game.contract.json` v1.1; thứ tự tick ADR-0002; đom đóm theo điểm sinh và lịch 240 tick; đom đóm rơi (vành 1.5–2.5 m, TTL 480, nhặt được từ tick sau); bất tử 90 tick; máy trạng thái Bóng Mực 5 trạng thái + `recoil`; Tỏa Sáng 3D, đẩy lùi 4 m trong 15 tick, trúng con đang choáng thì làm mới; vùng an toàn đẩy ra trong ≤ 30 tick; snapshot/scenario/input v1.1 | Tính lại toàn bộ case cũ; thêm case: hết Ngọn Lửa đúng tick thắp đèn cuối → thua; `per_stun` cộng cả con đang choáng |
+| P2-M2 | Lướt + Tạm dừng | F-01 (14 m/s × 12 tick, hồi 90 tick tính từ lúc bắt đầu, giữ Y trên không, không bất tử); F-05 (`tick` tăng, `sim_tick` và mọi bộ đếm đứng yên, `state:"paused"`) | `p2_dash_basic`, `p2_dash_hit`, `p2_pause` |
+| P2-M3 | Địa hình + rơi + Đêm 2 + Bùa Gió | Trọng lực −20, nhảy 7 m/s; điều khiển trên không 12 m/s²; rơi khi Y < −10 (bỏ qua bất tử, mất hết đom đóm, chờ 60 tick, hồi sinh, bất tử 90 tick); Đảo Cau (2 đảo, cầu tre, bục nhảy 14/24 m/s); F-03 Bùa Gió | `p2_fall`, `p2_bounce_pad_n2`, `p2_charm`, `p2_nights` (Đêm 2) |
+| P2-M4 | Gió Lạc | F-02: `idle`/`chase`/`flee`/`removed`, cướp `min(3, đang mang)`, Tỏa Sáng làm bỏ chạy hoặc thả lại; cướp xử lý trước hit | `p2_drifter_spawn`, `p2_drifter_chase_threshold`, `p2_drifter_steal`, `p2_drifter_pulse_drop`, `p2_steal_then_hit` |
+| P2-M5 | Đêm 3 + Gió mạnh | Đảo Chuông 3 tầng, 2 dốc, vách, tháp chuông (vật cản), bục nhảy (0,3,13); Bóng Mực 4.5 m/s; F-09 gió mỗi 1800 tick, kéo dài 300 tick, 2 m/s, hướng lấy từ RNG theo seed | `p2_bounce_pad_n3`, `p2_wind`, `p2_nights` (Đêm 1/2/3), `p2_perf_full_night` (21 600 tick ≤ 30 s) |
+| P2-M6 | Client chơi được 3 Đêm | Render Đảo Cau và Đảo Chuông; Chuỗi 3 Đêm (menu → lời Ông Đăng → chơi → kết quả → Đêm kế; thua thì chơi lại Đêm đó; Màn Bình Minh); HUD đầy đủ F-08 (đồng hồ đỏ và nhấp nháy khi ≤ 30 s, thanh 10 ô, icon hồi Lướt/Tỏa Sáng, dòng nhắc nạp theo phím đang gán, mũi tên tới đèn gần nhất ngoài màn hình); menu Tạm dừng (Esc/P); Cài đặt: đổi phím + âm lượng + độ nhạy (pan/zoom), lưu `localStorage` | Ảnh chụp 1280×720 từng Đêm, HUD, menu Tạm dừng, Màn Bình Minh; mở lại trang thì Cài đặt vẫn giữ |
+| P2-M7 | Âm thanh + bảng màu | F-07: WebAudio tổng hợp, chỉ ở `src/client/audio`; F-10: bảng màu chuẩn, ánh sáng môi trường `0.15 + 0.55 × sáng/tổng` (hàm thuần, có test 0/5 → 0.15, 5/5 → 0.70) | Test hàm ánh sáng; ghi âm hoặc quay video thủ công |
+| P2-M8 | Verify + nộp | `npm run verify` cho mọi case cũ và mới; cập nhật README (Lướt, Tạm dừng, điểm, "Sáng tạo của tôi", shade 4.5 ở Đêm 3); CLAUDE.md và skill `verify-phase`; bằng chứng `docs/evidence/phase-2/`; clean-clone; tag `phase-2` | Verify xanh ở commit được tag |
+
+**Ranh giới cắt** (cắt từ dưới lên): âm thanh F-07 → độ chính xác màu F-10 → mũi tên chỉ đèn → lời Ông Đăng. **Không cắt** bất cứ thứ gì trong sim/headless (P2-M1…M5) hay bằng chứng.
+
+### Điều khiển Phase 2 (bổ sung A13)
+
+Q nhảy, W nạp, E tỏa sáng, R chơi lại, **D lướt**, **Esc/P tạm dừng**; Space và chuột giữ như Phase 1. Mọi phím đổi được trong Cài đặt (nằm trong menu Tạm dừng). Dòng nhắc trên HUD đọc phím đang gán, nên mặc định là "W — Nạp ánh sáng (x/10)" chứ không phải chữ E như PRD.
+
+### Tiêu chí hoàn thành Phase 2
+
+- [ ] DoD §9 của `PRD_v2.md` đạt hết, mỗi dòng có bằng chứng trong `docs/evidence/phase-2/`
+- [ ] Mỗi AC ở §5 có ít nhất một case headless trong `scenarios/cases.mjs` (trừ AC kiểm tra thủ công: 06.1, 07.1, 08.x, 10.1, có ảnh hoặc video)
+- [ ] Toàn bộ case Phase 1 (đã tính lại theo số chuẩn) vẫn xanh
+- [ ] Headless 1 Đêm đầy đủ ≤ 30 s; ≥ 30 FPS ở 1280×720 trên máy thật
+- [ ] Tag `phase-2` trên repo public
+
+## Phase 3–4: khung (ticket chưa phát hành)
 
 Mỗi phase lặp lại vòng làm việc sau, khoảng 60 phút:
 

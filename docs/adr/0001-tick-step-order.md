@@ -1,5 +1,7 @@
 # Thứ tự xử lý cố định trong một bước tick
 
+> **Trạng thái: bị thay thế** bởi [ADR-0002](0002-tick-step-order-v1-1.md) từ Phase 2 (Test Contract v1.1).
+
 Test ẩn so output headless từng tick, nên thứ tự xử lý trong một bước quyết định sự kiện nào xảy ra trước và được ghi ở tick nào. Mỗi bước k (đọc input tick k, tạo trạng thái k+1, sự kiện ghi `tick = k+1`) luôn chạy theo thứ tự:
 
 1. Áp input tick k (cạnh lên của nút).
