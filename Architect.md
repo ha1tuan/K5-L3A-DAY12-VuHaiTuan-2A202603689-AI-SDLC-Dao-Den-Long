@@ -1,6 +1,6 @@
 # Kiến trúc: Đảo Đèn Lồng
 
-> Ghi chú kiến trúc cho Phase 1. Luật chơi: `docs/NOTES.md` (A1–A14). Thứ tự tick: `docs/adr/0001-tick-step-order.md`. Thuật ngữ game: `GLOSSARY.md`.
+> Ghi chú kiến trúc, cập nhật cho Phase 3 (Test Contract v1.2). Luật chơi: `PRD_v3.md` và giả định trong `docs/NOTES.md` (A1–A45). Thứ tự tick và mô hình đèn: `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002, ADR-0001). Thuật ngữ game: `GLOSSARY.md`.
 > Từ vựng thiết kế theo skill `codebase-design`: **Module**, **Interface**, **Seam**, **Adapter**, **Depth**.
 
 ## 1. Bức tranh tổng
@@ -77,33 +77,38 @@ export interface ControlState {
 - `lanterns[]`: `{ id: 'L1'…'L5', pos, lit, deposited }`
 - `shades[]`: `{ id, pos, state: 'chase'|'stunned', stunTicks }`
 - `motes[]`: `{ id, pos }`
-- `SimEvent`: union có phân biệt theo `name`, với `data` **đúng bảng event của contract** (`mote_picked`, `deposit`, `lantern_lit`, `pulse`, `player_hit`, `shade_spawned`, `game_over`) và kèm `tick`.
+- `SimEvent`: union có phân biệt theo `name`, với `data` **đúng bảng event của contract** (v1.0: `mote_picked`, `deposit`, `lantern_lit`, `pulse`, `player_hit`, `shade_spawned`, `game_over`; v1.1 thêm `night_start`, `dash`, `charm_picked`, `drifter_steal`, `drifter_drop`, `paused`, `resumed`; v1.2 thêm `refuel`, `lantern_out`, `fuel_drain` và `lantern_lit.relight`) và kèm `tick`.
 
 ## 3. Module `sim`: Implementation và seam nội bộ
 
 ```
 src/sim/
-  index.ts        createSim; interface công khai duy nhất
+  index.ts        createSim; interface công khai duy nhất (+ dữ liệu bản đồ chỉ-đọc cho client: nightDef)
   types.ts        SimState, ControlState, SimEvent, Scenario, Tuning
   tuning.ts       đọc tuning từ game.contract.json; đổi giây → tick: Math.round(s·60)
   world.ts        hằng số thế giới KHÔNG thuộc tuning (xem §6)
-  rng.ts          mulberry32(seed); PRNG duy nhất, mọi nơi dùng chung một instance
-  geometry.ts     distXZ, normalize2, rotateYaw, clampToDisk, pushOutOfDisk
-  scenario.ts     buildInitialState(seed, tuning, scenario?)
-  step.ts         NƠI DUY NHẤT quy định thứ tự hệ thống (ADR-0001)
+  nights.ts       dữ liệu bản đồ từng Đêm: điểm sinh, đèn, địa hình, bục nhảy, bùa, lịch sinh
+  terrain.ts      địa hình dạng cột: mặt đất dưới chân, vách, vật cản, chỗ rơi
+  rng.ts          mulberry32(seed); PRNG duy nhất (gió dùng luồng tách riêng theo seed)
+  geometry.ts     distXZ, dist3, unit2, rotateYaw, pushOutOf, byId
+  scenario.ts     buildInitialState(def, tuning, rng, scenario?)
+  step.ts         NƠI DUY NHẤT quy định thứ tự hệ thống (ADR-0003)
   systems/
-    player.ts     di chuyển, nhảy (chỉ đổi Y), kẹp mép đảo
-    motes.ts      tự nhặt, sinh bù
-    lanterns.ts   interact → nạp/thắp
-    pulse.ts      tốn đom đóm, cooldown, choáng, đẩy lùi
-    shades.ts     đuổi theo, đẩy ra khỏi vùng an toàn của đèn đã sáng, sinh thêm
-    hits.ts       bị chạm, rơi đom đóm, bất tử
-    end.ts        all_lit → no_flames → dawn; thưởng điểm khi thắng
+    context.ts    StepCtx, bộ nhớ giữa các tick (cạnh lên, bộ đếm id)
+    timers.ts     bộ đếm, hồi sinh, gió; Phase 3 thêm bước 2b trừ dầu, tắt đèn
+    player.ts     chạy, nhảy, lướt, bục nhảy, gió, rơi khỏi đảo
+    pickup.ts     nhặt đom đóm và bùa (theo sức chứa)
+    lanterns.ts   tương tác: nạp/thắp/thắp lại/châm dầu; vùng an toàn (chỉ đèn không yếu)
+    pulse.ts      tốn đom đóm, cooldown, choáng, đẩy lùi, xua Gió Lạc
+    shades.ts     Bóng Mực (spawning/wander/chase/recoil/stunned/drain) và Gió Lạc di chuyển
+    contacts.ts   Gió Lạc cướp, rồi tối đa một Bóng Mực đánh
+    spawn.ts      sinh đom đóm, Bóng Mực, Gió Lạc theo lịch; đom đóm rơi
+    end.ts        no_flames → bình minh (dawn_survived / dawn); thưởng bình minh
 ```
 
 - Mỗi `system` có dạng `(s: SimState, ctx: StepCtx) → void`, trong đó `ctx` chứa tuning, rng, các cạnh lên đã tính và hàm `emit(event)`. Đây là **seam nội bộ**: không export ra ngoài `index.ts`.
-- **Điểm số** được cộng tại nơi phát event tương ứng (`mote_picked`, `lantern_lit`, `pulse`), riêng thưởng khi thắng thì nằm ở `end.ts`. Không có module "score" riêng: nếu thử xoá đi (deletion test), logic điểm chỉ là 1 dòng ở mỗi nơi.
-- **Mọi bộ đếm thời gian tính bằng số nguyên tick** (choáng, bất tử, cooldown, sinh Bóng Mực mỗi 3600 tick, sinh đom đóm mỗi 120 tick) để tránh sai số cộng dồn và giữ tính tất định.
+- **Điểm số** được cộng tại nơi phát event tương ứng (`deposit`, `refuel`, `lantern_lit`, `pulse`), riêng thưởng bình minh khi thắng thì nằm ở `end.ts`. Số điểm đọc từ khối `score` của contract. Không có module "score" riêng: nếu thử xoá đi (deletion test), logic điểm chỉ là 1 dòng ở mỗi nơi.
+- **Mọi bộ đếm thời gian tính bằng số nguyên tick** (choáng, bất tử, cooldown, lịch sinh), và **dầu cũng là số nguyên** `fuel_ticks` (1/60 đơn vị, tối đa 6000), chỉ quy ra số thực khi xuất. Như vậy không có sai số cộng dồn và giữ tính tất định.
 - **Id** được sinh bằng bộ đếm tăng dần trong state (`S1`…, `M1`…), không dùng ngẫu nhiên.
 - **Trường hợp biên:** khi đẩy lùi mà Bóng Mực trùng đúng vị trí Mây (không có hướng) thì đẩy theo +X. Khi bị đẩy ra khỏi vùng an toàn, Bóng Mực được đặt **đúng trên mép** `safe_radius`. Bóng Mực **không** bị kẹp trong đảo vì chúng sống trong sương.
 
@@ -127,20 +132,24 @@ src/headless/
 
 ```
 src/client/
-  main.ts            ghép mọi thứ; R → createSim(seed mới) khi đã kết thúc
-  loop.ts            vòng lặp bước cố định: accumulator 1/60 s, tối đa 5 bước mỗi frame
+  main.ts            ghép mọi thứ: vòng lặp bước cố định (accumulator 1/60 s, tối đa 15 bước/frame), Chuỗi 3 Đêm, tạm dừng
+  campaign.ts        Chuỗi 3 Đêm: thắng cộng điểm và sang Đêm kế, thua chơi lại (hàm thuần)
+  story.ts           lời Ông Đăng trước mỗi Đêm
   input/
     clickToMove.ts   moveToward(pos, target, stop=0.2) → { move, arrived }  (hàm thuần)
-    keybindings.ts   Q nhảy / W nạp / E tỏa sáng / R chơi lại / Space camera; lưu localStorage
+    keybindings.ts   Q/W/E/D/P/R/Space; Esc dành cho tạm dừng; lưu Storage được truyền vào
     controls.ts      sample(playerPos) → ControlState (camYawDeg luôn = 0)
-  camera.ts          camera MOBA: góc cố định ~55°, trượt ở mép màn hình, Space về Mây/giữ để bám, lăn để zoom
-  scene/             dựng mesh: đảo, đèn, đom đóm, Bóng Mực, Mây; sync(state) mỗi frame
-  hud.ts             DOM overlay: lửa, mang/tối đa, đèn x/5, thời gian, điểm, cooldown, màn thắng/thua
-  settings.ts        màn Cài đặt (Esc) đổi phím; làm sau lõi
+  camera.ts          camera MOBA góc cố định, trượt ở mép, Space về Mây, lăn để zoom; giới hạn theo Đêm, theo độ nhạy
+  scene.ts           WorldView: dựng đảo từ nightDef + trang trí (cây, cỏ, đom đóm trang trí); sync(state) mỗi frame
+  lighting.ts        bảng màu F-10, ánh sáng môi trường 0.15 + 0.55 × sáng/tổng (hàm thuần)
+  hud.ts             DOM overlay F-08: Ngọn Lửa, đồng hồ, dây đèn, điểm, lọ đom đóm, hồi chiêu, nhắc nạp, mũi tên, banner gió
+  audio.ts           âm thanh tổng hợp WebAudio
+  settings.ts        menu Tạm dừng + Cài đặt (phím, âm lượng, độ nhạy)
+  settingsStore.ts   đọc/ghi cài đặt qua Storage được truyền vào (hàm thuần); Phase 3 thêm Bảng màu dễ phân biệt
 ```
 
-- **Click-to-move nằm hoàn toàn ở client.** Raycast điểm click xuống mặt phẳng Y = 0, kẹp vào đĩa bán kính 40 m, rồi mỗi tick `moveToward` sinh `move` theo hướng thế giới. Sim không biết gì về chuột.
-- `keybindings.ts` nhận `Storage` qua tham số. Có hai adapter (`localStorage` thật và `Map` trong bộ nhớ cho test), nên seam này là seam thật. Mọi lần đọc/ghi đều bọc `try/catch`, lỗi thì dùng mặc định.
+- **Click-to-move nằm hoàn toàn ở client.** Raycast điểm click vào địa hình thật (bậc, cầu, đảo bên kia), trượt ra ngoài thì lấy mặt phẳng Y = 0 nên Mây có thể chạy quá mép và rơi. Mỗi tick `moveToward` sinh `move` theo hướng thế giới. Sim không biết gì về chuột.
+- `keybindings.ts` và `settingsStore.ts` nhận `Storage` qua tham số. Có hai adapter (`localStorage` thật và `Map` trong bộ nhớ cho test), nên seam này là seam thật. Mọi lần đọc/ghi đều bọc `try/catch`, lỗi thì dùng mặc định.
 - `scene` và `hud` chỉ **đọc** `sim.state` và các `SimEvent` (event dùng cho hiệu ứng như đèn bừng sáng hay chớp khi bị chạm). Chúng không bao giờ ghi vào state.
 - Đồng hồ thật và `Math.random` (seed cho lượt chơi mới) được phép ở client, vì client không phải phần được chấm tất định.
 
@@ -149,7 +158,7 @@ src/client/
 | Ở đâu | Gì |
 |---|---|
 | `game.contract.json` → `tuning` | Mọi số có tên trong contract (A10). Không lặp lại ở nơi khác. |
-| `src/sim/world.ts` | Bán kính đảo 40, vòng đèn 25 (L1 ở 0°, mỗi đèn cách 72°), 30 đom đóm ban đầu, ngưỡng sinh bù < 15, chu kỳ sinh bù 120 tick, 2 Bóng Mực ban đầu, chu kỳ sinh Bóng Mực 3600 tick, tối đa 5, bán kính sinh 38, Bóng Mực ở Y = 1.0, trọng lực và vận tốc nhảy |
+| `src/sim/world.ts`, `src/sim/nights.ts` | Hằng số thế giới không thuộc tuning (trọng lực, nhảy, lịch sinh, trạng thái Bóng Mực, Gió Lạc, gió, bùa, `fuel_ticks` tối đa 6000) và dữ liệu bản đồ từng Đêm |
 | `src/client/*` | Chỉ hằng số hiển thị/điều khiển (ngưỡng dừng 0.2 m, góc camera, tốc độ trượt mép, giới hạn zoom, màu) |
 
 ## 7. Kiểm thử: interface là bề mặt test
@@ -159,7 +168,8 @@ src/client/
 | Luật chơi | Vitest `tests/sim/*.test.ts` | `createSim` + `step` + `state`, dùng scenario nhỏ; không test trực tiếp các `system` |
 | Contract output | Vitest `tests/headless/*.test.ts` | `runHeadless`, `parseScenario`, `parseInputs`, `InputTimeline` |
 | End-to-end + exit code + tính tất định | `scripts/verify` | binary `node dist/headless.js` thật với `scenarios/` và `inputs/` |
-| Client (điều khiển, camera, HUD, hình ảnh) | Chơi tay + ảnh chụp, không có seam test tự động ở Phase 1 | `npm start` |
+| Client: hàm thuần | Vitest `tests/client/*.test.ts` | `ambientIntensity`, `advanceCampaign`, `loadSettings`/`saveSettings`, `KeyBindings` với Storage trong bộ nhớ |
+| Client (hình ảnh, HUD, âm thanh) | Chơi tay + ảnh chụp | `npm start` |
 
 **Hàng rào phụ thuộc:** `scripts/verify` (và hook) có một bước kiểm tra tĩnh rằng `src/sim/**` không chứa `from 'three'`, `document`, `window`, `node:`, `Math.random`, `Date.now`, `performance.now`. Lỗi kiểu này được chặn bằng máy thay vì chỉ dặn bằng lời.
 
@@ -168,5 +178,5 @@ src/client/
 - **Sim tự phát hiện cạnh lên** thay vì để caller gửi "nhấn mới". Phát hiện cạnh lên nằm một chỗ cho cả hai adapter, và tệp inputs của contract vốn là level-state.
 - **Sim mutable nội bộ, `step` trả về event** thay vì `step(state) → newState` bất biến. Cách này đơn giản và nhanh cho hàng chục nghìn tick, còn caller vẫn chỉ thấy `Readonly<SimState>`.
 - **Hình dạng JSONL nằm ở `headless/format.ts`, không nằm trong sim**, vì client không cần nó và contract có thể đổi giữa các phase.
-- **Không làm event bus hay ECS:** với 4 loại thực thể và 7 hệ thống thì gọi hàm theo thứ tự trong `step.ts` là đủ, và thứ tự được nhìn thấy ngay.
+- **Không làm event bus hay ECS:** với 6 loại thực thể và khoảng 10 hệ thống thì gọi hàm theo thứ tự trong `step.ts` là đủ, và thứ tự được nhìn thấy ngay.
 - **Render không nội suy** giữa hai tick ở Phase 1, vì 60 Hz đã đủ mượt. Có thể thêm sau mà không đổi interface.

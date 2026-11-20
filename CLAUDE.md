@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Game 3D **Đảo Đèn Lồng** (AI SDLC lab, 4 phase). Yêu cầu: `PRD.md` (Phase 1, Test Contract v1.0) và `PRD_v2.md` (Phase 2, **Test Contract v1.1**, hiện hành). Kiến trúc: `Architect.md`. Kế hoạch: `docs/PLAN.md`. Thuật ngữ: `GLOSSARY.md`. Giả định & nhật ký: `docs/NOTES.md`.
+Game 3D **Đảo Đèn Lồng** (AI SDLC lab, 4 phase). Yêu cầu: `PRD.md` (Phase 1, v1.0), `PRD_v2.md` (Phase 2, v1.1) và `PRD_v3.md` (Phase 3 "Đèn cạn dầu", **Test Contract v1.2**, hiện hành; luật nào v3 không nhắc thì giữ v2). Kiến trúc: `Architect.md`. Kế hoạch: `docs/PLAN.md`. Thuật ngữ: `GLOSSARY.md`. Giả định & nhật ký: `docs/NOTES.md`. Breaking changes: `CHANGELOG.md`.
 
 ## Lệnh
 
@@ -28,10 +28,11 @@ Phụ thuộc một chiều: `headless` → `sim` ← `client`. Hai adapter khô
 ## Quy tắc cứng
 
 - `src/sim/` **không** import `three`, DOM, Node API; không dùng `Math.random`, `Date.now`, `performance.now`. Ngẫu nhiên chỉ đến từ PRNG được seed bằng `--seed`. `scripts/verify` kiểm tra tĩnh điều này.
-- Bước cố định 1/60 s; mọi bộ đếm thời gian trong sim tính bằng **số nguyên tick**, `timeLeftS` suy ra từ `tick`. Thứ tự xử lý trong tick theo `docs/adr/0002-tick-step-order-v1-1.md` (ADR-0001 đã bị thay); đổi thứ tự phải có ADR mới. Khi tạm dừng, `tick` tăng nhưng `sim_tick` và mọi bộ đếm đứng yên.
+- Bước cố định 1/60 s; mọi bộ đếm thời gian trong sim tính bằng **số nguyên tick**, `timeLeftS` suy ra từ `tick`. Thứ tự xử lý trong tick và mô hình đèn theo `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002 và ADR-0001); đổi thứ tự phải có ADR mới. Khi tạm dừng, `tick` tăng nhưng `sim_tick` và mọi bộ đếm đứng yên.
+- Dầu đèn lưu bằng **số nguyên** `fuel_ticks` (tối đa 6000 = 100 × 60); chỉ quy ra `fuel` một chữ số thập phân ở `headless/format.ts`. Không cộng trừ dầu bằng số thực.
 - Không hard-code số tuning trong code; khai ở `game.contract.json` để chỗ khai báo và số thật luôn khớp.
-- Mọi khoảng cách gameplay đo trên mặt phẳng XZ trừ chỗ PRD ghi rõ 3D (bán kính Tỏa Sáng); "trong bán kính r" là `≤ r`. Toạ độ output làm tròn 3 chữ số.
-- Dựng scenario không phát event, không cộng điểm. Event chỉ dùng tên/data đúng bảng trong `PRD.md` mục E và `PRD_v2.md` §6.2.
+- Mọi khoảng cách gameplay đo trên mặt phẳng XZ trừ chỗ PRD ghi rõ 3D (bán kính Tỏa Sáng); "trong bán kính r" là `≤ r`. Toạ độ output làm tròn 3 chữ số; `fuel` làm tròn 1 chữ số.
+- Dựng scenario không phát event, không cộng điểm. Event chỉ dùng tên/data đúng bảng trong `PRD.md` mục E, `PRD_v2.md` §6.2 và `PRD_v3.md` §6.
 - Exit code: 0 nếu chạy xong hoặc game kết thúc; 2 nếu file inputs/scenario sai định dạng; ≠0 kèm stderr cho lỗi khác.
 - Không sửa tay output hay bằng chứng; không viết test "luôn đạt". Chưa có bằng chứng thì báo **chưa xong**.
 - Điều khiển (click-to-move, camera kiểu MOBA, phím Q/W/E/R/D, Esc/P) và âm thanh chỉ sống ở `src/client/`; sim chỉ biết `move [x,z]`, `cam_yaw_deg`, các nút (`jump`, `interact`, `pulse`, `dash`, `pause`). Nội dung sáng tạo phải tắt ở headless.
