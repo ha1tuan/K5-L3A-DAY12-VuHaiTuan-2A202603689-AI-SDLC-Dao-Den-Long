@@ -19,14 +19,6 @@ export function rotateYaw(v: [number, number], yawDeg: number): [number, number]
   return [v[0] * c + v[1] * s, -v[0] * s + v[1] * c];
 }
 
-/** Keeps a point inside the disk of radius r centred at the origin (XZ). */
-export function clampToDisk(p: Vec3, r: number): void {
-  const d = Math.hypot(p[0], p[2]);
-  if (d > r) {
-    p[0] = (p[0] / d) * r;
-    p[2] = (p[2] / d) * r;
-  }
-}
 
 /** Unit XZ direction from a to b; +X when the points coincide. */
 export function dirXZ(a: Vec3, b: Vec3): [number, number] {
@@ -35,3 +27,23 @@ export function dirXZ(a: Vec3, b: Vec3): [number, number] {
   const d = Math.hypot(dx, dz);
   return d === 0 ? [1, 0] : [dx / d, dz / d];
 }
+
+export const dist3 = (a: Vec3, b: Vec3): number => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/** Unit vector of [x, z], or null for a zero vector. */
+export function unit2(v: [number, number]): [number, number] | null {
+  const len = Math.hypot(v[0], v[1]);
+  return len < 1e-9 ? null : [v[0] / len, v[1] / len];
+}
+
+/** Places p on the rim of the circle (centre c, radius r) if it is strictly inside. */
+export function pushOutOf(p: Vec3, c: Vec3, r: number): void {
+  if (distXZ(p, c) >= r) return;
+  const [dx, dz] = dirXZ(c, p);
+  p[0] = c[0] + dx * r;
+  p[2] = c[2] + dz * r;
+}
+
+/** Orders ids like S2 < S10 (numeric part), falling back to plain string order. */
+export const byId = (a: { id: string }, b: { id: string }): number =>
+  a.id.localeCompare(b.id, 'en', { numeric: true });

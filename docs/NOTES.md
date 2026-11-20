@@ -56,3 +56,38 @@ PRD-0 cố ý mơ hồ; dưới đây là cách hiểu đã chọn. Test và b�
 - Cân nhắc thêm một Stop hook chạy `npm run verify` trước khi kết thúc lượt, nếu verify đủ nhanh (hiện khoảng 3 s sau build).
 
 **Thứ tự đã làm:** grilling PRD (17 câu, A1–A14) → kiến trúc → spec (issue #1) → TDD sim/headless → client → harness verify → nộp. Các phase sau giữ nguyên vòng này.
+
+## Phase 2
+
+Nguồn: `PRD_v2.md` (Test Contract v1.1). Số chuẩn, bản đồ chuẩn và contract lấy nguyên từ PRD. Bảng dưới chỉ ghi những chỗ PRD để mở, đã chốt qua phiên grilling.
+
+### Giả định
+
+| # | Chủ đề | Giả định |
+|---|---|---|
+| A15 | Thứ tự tick | Theo `docs/adr/0002-tick-step-order-v1-1.md` (đúng §3.9), thay A12. Hết Ngọn Lửa luôn thua, kể cả cùng tick thắp đèn cuối cùng |
+| A16 | Thuật ngữ | "Bình minh" (`dawn`) là lý do thua; màn kết sau khi thắng Đêm 3 gọi là "Màn Bình Minh". "Lửa" đổi thành "Ngọn Lửa" |
+| A17 | Phím | Thêm D lướt, Esc/P tạm dừng; giữ Q/W/E/R. Dòng nhắc nạp trên HUD dùng phím đang gán (mặc định W), khác chữ "E" trong PRD F-08 |
+| A18 | Menu | Esc/P mở menu Tạm dừng (Tiếp tục / Chơi lại Đêm / Cài đặt / Về menu); Cài đặt gồm đổi phím, âm lượng, độ nhạy chuột (= tốc độ pan ở mép màn hình và bước zoom, vì không có xoay camera bằng chuột); lưu `localStorage` dưới key có version mới |
+| A19 | Tăng tốc | Trên mặt đất đổi vận tốc tức thì (0 s, thoả "≤ 0.1 s"); trên không vận tốc ngang tiến về hướng mong muốn với gia tốc 12 m/s² (0.2 m/s mỗi tick). Bục nhảy khoá vận tốc ngang tới khi chạm đất |
+| A20 | Địa hình | Mặt đất dưới chân là bề mặt cao nhất không cao hơn chân Mây quá 0.3 m; vách cao hơn bị chặn ngang; ra khỏi mép thì rơi theo trọng lực. Số liệu bản đồ là dữ liệu trong sim, không thuộc `tuning` |
+| A21 | Bóng Mực bay | Tâm luôn ở 1.0 m trên mặt đất bên dưới; bay qua vách và cầu; chỉ bị chặn bởi trụ tháp chuông, mép vùng an toàn và mép đảo (đẩy lùi dừng tại đó). Gió Lạc theo cùng luật |
+| A22 | Trạng thái Bóng Mực | `spawning` 60 tick (đứng yên, vô hại); `wander` đi tới điểm ngẫu nhiên (RNG theo seed) trong bán kính 8 m với 50% `shade_speed`, đổi điểm khi tới nơi hoặc sau 180 tick; `chase` khi XZ ≤ 12 m, về `wander` khi > 18 m; `recoil` lùi 2 m trong 60 tick ra xa Mây |
+| A23 | Vùng an toàn | Bóng Mực đang ở trong lúc đèn vừa thắp bị đẩy ra mép với 0.2 m mỗi tick (6 m trong ≤ 30 tick), vô hại trong lúc bị đẩy |
+| A24 | PRD §10 | Chấp nhận nguyên Q1–Q9 của PRD (shade 4.5 m/s ở Đêm 3 xử lý trong code, `tuning.shade_speed = 4.0`; Gió Lạc sinh ở điểm sinh Bóng Mực của Đêm, chọn bằng RNG; tối đa 2 con chưa `removed`; gió ở tick 1800k, báo trước từ 1680k; drifter 7 m/s cả `chase` và `flee`; 20/24 điểm đom đóm Đêm 2 chọn bằng RNG; rơi đom đóm làm tròn xuống) |
+| A25 | Điểm Gió Lạc | Tỏa Sáng trúng Gió Lạc không cộng `per_stun` |
+| A26 | Id đom đóm | `M1`, `M2`, … theo thứ tự xuất hiện, kể cả đom đóm rơi |
+| A27 | Âm thanh | Tổng hợp bằng WebAudio, không dùng file; chỉ nằm ở `src/client/audio`; headless không khởi tạo audio |
+| A28 | Màu | Cảnh 3D dùng bảng màu chuẩn F-10; UI dùng `#F5F1E6` / `#FF5A5F` / `#F2C14E`. Giữ phông Baloo 2 và HUD dây đèn lồng làm phần sáng tạo |
+| A29 | Điểm xuất phát Đêm 3 | PRD không ghi; chọn (0, 0, −30) trên mặt đất phía bắc, xa bậc và tháp, cũng là điểm hồi sinh sau khi rơi |
+| A30 | Lời Ông Đăng | Màn giới thiệu trước mỗi Đêm (tên đảo, ba câu của Ông Đăng, một dòng mẹo). Chỉ ở client: sim chưa bước tick nào cho tới khi người chơi nhấn "Vào Đêm"; thua thì chơi lại Đêm đó và nghe lại lời giới thiệu |
+| A31 | Trang trí và lối tắt khi thử | Cây, cỏ, đom đóm trang trí, sao và mây chỉ ở client, sinh bằng PRNG cố định theo số Đêm (không dùng `--seed`, không đụng sim). `?night=2\|3` trên URL vào thẳng Đêm đó để thử nhanh, Chuỗi 3 Đêm bắt đầu từ Đêm ấy |
+
+### Nhật ký dùng AI
+
+| Thời điểm | Việc | Công cụ / model | AI sai ở đâu, đã sửa thế nào | Token / chi phí ước tính |
+|---|---|---|---|---|
+| P2-M0 | Đọc `PRD_v2.md`, so với Phase 1; grilling 14 câu; viết ADR-0002, cập nhật GLOSSARY, PLAN, NOTES, CLAUDE.md | Claude Code (Opus) | | |
+| P2-M1–M4 | Spec (issue #3), lõi sim + headless v1.1 theo TDD: số chuẩn, ADR-0002, địa hình cột, Lướt, Tạm dừng, Bóng Mực 5 trạng thái, Gió Lạc, Bùa Gió, gió, ba bản đồ (109 test) | Claude Code (Opus) | Lệnh `git rm` hỏng giữa chuỗi `&&` nên `world.ts` cũ còn nguyên, sim sinh 24 đom đóm thay vì 20: test bắt được, đã sửa. Nhiều test tự viết sai thời điểm (hai lần nhấn Lướt liền tick là một lần giữ; bùa hết hạn ở tick 601; người chơi đi lạc khỏi đảo trong test bùa; Bóng Mực đặt trong vùng an toàn nên vô hại theo luật): sửa test, sim đúng. Bóng Mực lùi chỉ 59 tick: lỗi đếm, đã sửa sim. Sai số dấu phẩy động khi đáp đất (y ≈ 2e-15): thêm dung sai 1e-9 | |
+| P2-M5 | `scenarios/cases.mjs` + `scripts/verify.mjs` cho v1.1: 46 case + 2 kiểm tra tĩnh, kỳ vọng tính tay | Claude Code (Opus) | `p2_fall` lệch 3 tick vì Mây nhặt Bùa Gió đặt sẵn giữa cầu rồi chạy nhanh hơn: bỏ bùa khỏi scenario thay vì sửa số kỳ vọng. Case `hit-drop` đọc snapshot tick 1 nhưng chu kỳ snapshot là 10: thêm `snapshotEvery: 1`. Đột biến `dash_speed` 14 → 13: verify bắt được ở 3 kiểm tra | |
+| P2-M6/M7 | Client WebGL với skill `game-engine` + Chrome: ba đảo 3D từ dữ liệu bản đồ, cây, đom đóm bay, Lướt, menu Tạm dừng, Cài đặt, Chuỗi 3 Đêm, âm thanh WebAudio, HUD F-08, lời Ông Đăng (5 test hàm thuần) | Claude Code (Opus) + Chrome | Qua ảnh chụp phát hiện: cảnh quá tối, cây che kín đảo, đom đóm ngả xanh (màu cộng lên nền xanh ngọc và bị sương pha), dốc Đêm 3 nghiêng ngược chiều, mặt bậc trùng màu nền, mũi tên chỉ đèn đè lên ô điểm: đã sửa cả. Tưởng camera không pan được, hoá ra công cụ rê chuột dùng toạ độ ảnh đã thu nhỏ. Đo được tab Chrome tự động bị hãm 1 FPS (khung cách đều 1008 ms, không có long task) nên không chờ được tới banner gió, đồng hồ đỏ và dòng nhắc nạp đèn trên UI | |

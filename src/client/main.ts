@@ -1,16 +1,22 @@
 import * as THREE from 'three';
-import { CONTRACT_TUNING, ISLAND_RADIUS, createSim, type Sim, type SimEvent } from '../sim';
+import { CONTRACT_TUNING, createSim, nightDef, type NightId, type Sim, type SimEvent } from '../sim';
+import { GameAudio } from './audio';
+import { advanceCampaign, startCampaign, type Campaign } from './campaign';
 import { MobaCamera } from './camera';
 import { Hud } from './hud';
 import { Controls } from './input/controls';
 import { KeyBindings, keyLabel } from './input/keybindings';
-import { IslandScene } from './scene';
+import { WorldView } from './scene';
+import { NIGHT_INTROS } from './story';
 import { SettingsPanel } from './settings';
+import { loadSettings } from './settingsStore';
 import './style.css';
 
 const T = CONTRACT_TUNING;
 const STEP = 1 / 60;
-const MAX_STEPS_PER_FRAME = 15; // keeps real time down to ~4 fps; the sim is cheap
+const MAX_STEPS_PER_FRAME = 15;
+const NIGHT_NAMES: Record<NightId, string> = { 1: NIGHT_INTROS[1].island, 2: NIGHT_INTROS[2].island, 3: NIGHT_INTROS[3].island };
+const DURATION: Record<NightId, number> = { 1: T.night1_duration_s, 2: T.night2_duration_s, 3: T.night3_duration_s };
 
 function safeStorage(): Storage | null {
   try {
@@ -20,38 +26,80 @@ function safeStorage(): Storage | null {
   }
 }
 
+const storage = safeStorage();
 const canvas = document.querySelector('#game') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-const camera3d = new THREE.PerspectiveCamera(45, 1, 0.1, 400);
-const world = new IslandScene();
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const camera3d = new THREE.PerspectiveCamera(45, 1, 0.1, 600);
 const cam = new MobaCamera(camera3d, canvas);
-const bindings = new KeyBindings(safeStorage());
+const bindings = new KeyBindings(storage);
 const controls = new Controls(bindings);
 const hud = new Hud(bindings);
-const settings = new SettingsPanel(bindings);
-settings.onChange = () => {
-  hud.renderKeys();
-  renderHints();
-};
+const settings = new SettingsPanel(bindings, storage);
+cam.sensitivity = loadSettings(storage).sensitivity;
+const audio = new GameAudio(loadSettings(storage).volume);
+const unlockAudio = () => audio.unlock();
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
 
 const titleEl = document.querySelector('#title') as HTMLElement;
 const endEl = document.querySelector('#ending') as HTMLElement;
+const nightLabel = document.querySelector('#night-name') as HTMLElement;
+const introEl = document.querySelector('#intro') as HTMLElement;
 
-type Phase = 'title' | 'playing' | 'ended';
+type Phase = 'title' | 'intro' | 'playing' | 'ended';
 let phase: Phase = 'title';
+let campaign: Campaign = startCampaign();
 let sim: Sim = createSim({ seed: 1, night: 1 });
+let world = new WorldView(nightDef(1, T));
 let tally = { motes: 0, lanterns: 0, stuns: 0 };
+/** One pause press waiting to reach the sim (Esc/P or the menu's Tiếp tục). */
+let pauseEdge = false;
 
-function newNight(): void {
-  sim = createSim({ seed: Math.floor(Math.random() * 2 ** 31), night: 1 });
+function loadNight(night: NightId): void {
+  world.dispose();
+  world = new WorldView(nightDef(night, T));
+  cam.bounds = world.bounds;
+  sim = createSim({ seed: Math.floor(Math.random() * 2 ** 31), night });
   tally = { motes: 0, lanterns: 0, stuns: 0 };
   controls.reset();
+  pauseEdge = false;
+  audio.reset();
   cam.centerOn(sim.state.player.pos);
-  phase = 'playing';
+  nightLabel.textContent = `Đêm ${night} · ${NIGHT_NAMES[night]}`;
+}
+
+/** Ông Đăng introduces the night over its island, then the night starts on Vào đêm / Enter. */
+function play(night: NightId): void {
+  loadNight(night);
+  phase = 'intro';
   titleEl.hidden = true;
   endEl.hidden = true;
+  settings.close();
+  const intro = NIGHT_INTROS[night];
+  (introEl.querySelector('.night-tag') as HTMLElement).textContent = `Đêm ${night} / 3`;
+  (introEl.querySelector('h2') as HTMLElement).textContent = intro.island;
+  (introEl.querySelector('blockquote') as HTMLElement).innerHTML = intro.lines.map((l) => `<p>${l}</p>`).join('');
+  (introEl.querySelector('p.hint') as HTMLElement).textContent = intro.hint;
+  (introEl.querySelector('#begin') as HTMLElement).textContent = `Vào Đêm ${night}`;
+  introEl.hidden = false;
+  (introEl.querySelector('#begin') as HTMLButtonElement).focus();
+}
+
+function beginNight(): void {
+  if (phase !== 'intro') return;
+  phase = 'playing';
+  introEl.hidden = true;
+  acc = 0;
   canvas.focus();
+}
+
+function newCampaign(): void {
+  campaign = startCampaign();
+  play(1);
 }
 
 function renderHints(): void {
@@ -59,73 +107,123 @@ function renderHints(): void {
     el.textContent = keyLabel(bindings.all[el.dataset.key as keyof typeof bindings.all]);
   }
 }
+settings.onChange = () => {
+  hud.renderKeys();
+  renderHints();
+  cam.sensitivity = settings.values.sensitivity;
+  audio.setVolume(settings.values.volume);
+};
 
 function showEnding(): void {
   const s = sim.state;
   const won = s.status === 'won';
-  const earned =
-    tally.motes * T.score.per_mote + tally.lanterns * T.score.per_lantern + tally.stuns * T.score.per_stun;
-  (endEl.querySelector('h2') as HTMLElement).textContent = won ? 'Đảo Bến sáng trở lại' : 'Đêm đã qua';
-  (endEl.querySelector('.reason') as HTMLElement).textContent = won
-    ? 'Cả năm Đèn Lồng Lớn đã cháy. Sương đen lùi ra biển mây.'
-    : s.endReason === 'dawn'
-      ? `Bình minh đến khi mới thắp ${s.lanterns.filter((l) => l.lit).length} trên 5 đèn.`
-      : 'Mây đã hết lửa. Bóng Mực phủ kín bến.';
+  const night = campaign.night;
+  campaign = advanceCampaign(campaign, { won, score: s.score });
+  const h2 = endEl.querySelector('h2') as HTMLElement;
+  const reason = endEl.querySelector('.reason') as HTMLElement;
+  const button = endEl.querySelector('#again') as HTMLButtonElement;
+  if (campaign.finished) {
+    h2.textContent = 'Bình minh trên ba hòn đảo';
+    reason.textContent = 'Chuông tháp ngân, sương đen tan vào biển mây. Đảo Đèn Lồng sáng trở lại.';
+    button.textContent = 'Chơi lại từ Đêm 1';
+  } else if (won) {
+    h2.textContent = `${NIGHT_NAMES[night]} sáng trở lại`;
+    reason.textContent = `Cả ${s.lanterns.length} Đèn Lồng Lớn đã cháy. Gió đưa Mây sang ${NIGHT_NAMES[campaign.night]}.`;
+    button.textContent = `Sang Đêm ${campaign.night}`;
+  } else {
+    h2.textContent = 'Đêm đã qua';
+    reason.textContent =
+      s.endReason === 'dawn'
+        ? `Bình minh đến khi mới thắp ${s.lanterns.filter((l) => l.lit).length} trên ${s.lanterns.length} đèn.`
+        : 'Mây đã hết Ngọn Lửa. Bóng Mực phủ kín đảo.';
+    button.textContent = `Chơi lại Đêm ${night}`;
+  }
+  const earned = tally.motes * T.score.per_mote + tally.lanterns * T.score.per_lantern + tally.stuns * T.score.per_stun;
   const rows: [string, string][] = [
-    [`Đom đóm nhặt được`, `${tally.motes} × ${T.score.per_mote}`],
-    [`Đèn đã thắp`, `${tally.lanterns} × ${T.score.per_lantern}`],
-    [`Bóng Mực bị xua`, `${tally.stuns} × ${T.score.per_stun}`],
+    ['Đom đóm đã nạp', `${tally.motes} × ${T.score.per_mote}`],
+    ['Đèn đã thắp', `${tally.lanterns} × ${T.score.per_lantern}`],
+    ['Bóng Mực bị xua', `${tally.stuns} × ${T.score.per_stun}`],
   ];
-  if (won) rows.push([`Thưởng thời gian và lửa còn lại`, `${s.score - earned}`]);
+  if (won) rows.push(['Thưởng thời gian và lửa còn lại', `${s.score - earned}`]);
+  rows.push(['Điểm Đêm này', s.score.toLocaleString('vi-VN')]);
   (endEl.querySelector('dl') as HTMLElement).innerHTML =
     rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') +
-    `<dt class="total">Tổng điểm</dt><dd class="total">${s.score.toLocaleString('vi-VN')}</dd>`;
+    `<dt class="total">Tổng điểm</dt><dd class="total">${campaign.total.toLocaleString('vi-VN')}</dd>`;
   endEl.hidden = false;
-  (endEl.querySelector('button') as HTMLButtonElement).focus();
+  button.focus();
+}
+
+function continueAfterEnding(): void {
+  if (campaign.finished) newCampaign();
+  else play(campaign.night);
 }
 
 function handleEvents(events: SimEvent[]): void {
   for (const e of events) {
-    if (e.name === 'mote_picked') tally.motes++;
+    if (e.name === 'deposit') tally.motes += e.data.amount;
     if (e.name === 'lantern_lit') tally.lanterns++;
     if (e.name === 'pulse') tally.stuns += e.data.stunned_ids.length;
   }
   world.onEvents(events, sim.state);
+  audio.onStep(events, sim.state);
 }
 
 // --- input wiring -----------------------------------------------------------
 const raycaster = new THREE.Raycaster();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const seaLevel = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.button !== 0 || phase !== 'playing') return;
+  if (e.button !== 0 || phase !== 'playing' || sim.state.paused) return;
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
   raycaster.setFromCamera(ndc, camera3d);
-  const hit = new THREE.Vector3();
-  if (!raycaster.ray.intersectPlane(groundPlane, hit)) return;
-  const r = Math.hypot(hit.x, hit.z);
-  if (r > ISLAND_RADIUS) hit.multiplyScalar(ISLAND_RADIUS / r);
+  const hit = raycaster.intersectObjects(world.pickables, false)[0]?.point ?? raycaster.ray.intersectPlane(seaLevel, new THREE.Vector3());
+  if (!hit) return;
+  // No invisible wall: a click past the edge sends Mây over it (§3.7 fall).
   controls.target = [hit.x, hit.z];
-  world.showMarker(hit.x, hit.z);
+  world.showMarker(hit.x, hit.y, hit.z);
 });
 
+const togglePause = () => {
+  if (phase !== 'playing') return;
+  pauseEdge = true;
+};
 controls.onAction = (action, down) => {
   if (!down) return;
   if (action === 'camera') cam.centerOn(sim.state.player.pos);
-  if (action === 'restart' && phase === 'ended') newNight();
+  if (action === 'pause') togglePause();
+  if (action === 'restart' && phase === 'ended') continueAfterEnding();
+};
+settings.onResume = togglePause;
+settings.onRestart = () => play(campaign.night);
+settings.onMenu = () => {
+  phase = 'title';
+  settings.close();
+  endEl.hidden = true;
+  introEl.hidden = true;
+  titleEl.hidden = false;
 };
 
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Escape' && !settings.isOpen) {
+  if (e.code === 'Escape' && phase === 'playing' && !settings.isCapturing) {
     e.preventDefault();
-    settings.open();
+    togglePause();
   }
-  if (e.code === 'Enter' && phase === 'title') newNight();
+  if (e.code === 'Enter' && phase === 'title') newCampaign();
+  else if (e.code === 'Enter' && phase === 'intro') {
+    e.preventDefault();
+    beginNight();
+  }
 });
-document.querySelector('#start')!.addEventListener('click', newNight);
-document.querySelector('#again')!.addEventListener('click', newNight);
+document.querySelector('#start')!.addEventListener('click', newCampaign);
+document.querySelector('#begin')!.addEventListener('click', beginNight);
+document.querySelector('#again')!.addEventListener('click', continueAfterEnding);
 
 // --- loop -------------------------------------------------------------------
+const tmpProj = new THREE.Vector3();
+const project = (p: readonly number[]) => {
+  tmpProj.set(p[0], p[1], p[2]).project(camera3d);
+  return { x: ((tmpProj.x + 1) / 2) * window.innerWidth, y: ((1 - tmpProj.y) / 2) * window.innerHeight, inFront: tmpProj.z < 1 };
+};
 function resize(): void {
   const { innerWidth: w, innerHeight: h } = window;
   renderer.setSize(w, h, false);
@@ -141,30 +239,44 @@ let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.25, (now - last) / 1000);
   last = now;
-  const paused = settings.isOpen;
-  controls.enabled = !paused;
 
-  if (phase === 'playing' && !paused) {
+  if (phase === 'playing') {
     acc += dt;
     let steps = 0;
     while (acc >= STEP && steps < MAX_STEPS_PER_FRAME) {
-      handleEvents(sim.step(controls.sample(sim.state.player.pos)));
+      const ctrl = controls.sample(sim.state.player.pos);
+      if (sim.state.paused) Object.assign(ctrl, { move: [0, 0], jump: false, interact: false, pulse: false, dash: false });
+      ctrl.pause = pauseEdge;
+      pauseEdge = false;
+      handleEvents(sim.step(ctrl));
       acc -= STEP;
       steps++;
       if (sim.state.status !== 'playing') {
         phase = 'ended';
+        settings.close();
         showEnding();
         break;
       }
     }
     if (steps === MAX_STEPS_PER_FRAME) acc = 0;
+    // The menu follows the sim's own paused flag (A17).
+    if (phase === 'playing' && sim.state.paused !== settings.isOpen) sim.state.paused ? settings.open() : settings.close();
   }
+  const frozen = phase === 'playing' && sim.state.paused;
 
-  cam.update(dt, phase === 'playing' && controls.isHeld('camera') ? sim.state.player.pos : null);
-  world.sync(sim.state, paused ? 0 : dt);
-  hud.update(sim.state, T.night1_duration_s);
+  cam.update(dt, phase === 'playing' && !frozen && controls.isHeld('camera') ? sim.state.player.pos : null);
+  world.sync(sim.state, frozen ? 0 : dt);
+  audio.setPaused(frozen || phase !== 'playing');
+  hud.update(sim.state, DURATION[sim.state.night], project);
   renderer.render(world.scene, camera3d);
   requestAnimationFrame(frame);
 }
+cam.bounds = world.bounds;
 cam.centerOn([0, 0, 0]);
+// Dev shortcut: ?night=2 or ?night=3 jumps straight into that night (campaign starts there).
+const devNight = Number(new URLSearchParams(location.search).get('night'));
+if (devNight === 2 || devNight === 3) {
+  campaign = { night: devNight, total: 0, finished: false };
+  play(devNight);
+}
 requestAnimationFrame(frame);

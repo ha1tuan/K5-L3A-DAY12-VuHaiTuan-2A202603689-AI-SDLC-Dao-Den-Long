@@ -1,17 +1,19 @@
-export type Action = 'jump' | 'interact' | 'pulse' | 'restart' | 'camera';
+export type Action = 'jump' | 'interact' | 'pulse' | 'dash' | 'pause' | 'restart' | 'camera';
 
 export const ACTIONS: { action: Action; label: string }[] = [
   { action: 'jump', label: 'Nhảy' },
   { action: 'interact', label: 'Nạp đèn' },
   { action: 'pulse', label: 'Tỏa sáng' },
+  { action: 'dash', label: 'Lướt' },
+  { action: 'pause', label: 'Tạm dừng' },
   { action: 'restart', label: 'Chơi lại' },
   { action: 'camera', label: 'Camera về Mây' },
 ];
 
 export type Bindings = Record<Action, string>;
-export const DEFAULT_BINDINGS: Bindings = { jump: 'KeyQ', interact: 'KeyW', pulse: 'KeyE', restart: 'KeyR', camera: 'Space' };
+export const DEFAULT_BINDINGS: Bindings = { jump: 'KeyQ', interact: 'KeyW', pulse: 'KeyE', dash: 'KeyD', pause: 'KeyP', restart: 'KeyR', camera: 'Space' };
 
-const STORAGE_KEY = 'dao-den-long.keys.v1';
+const STORAGE_KEY = 'dao-den-long.keys.v2';
 const RESERVED = new Set(['Escape']);
 
 /** Key bindings persisted in a Storage (localStorage in the browser); any failure falls back to defaults. */
@@ -43,7 +45,7 @@ export class KeyBindings {
 
   /** Returns an error message when the key cannot be used, otherwise saves it. */
   set(action: Action, code: string): string | null {
-    if (RESERVED.has(code)) return 'Esc dùng để mở và đóng cài đặt.';
+    if (RESERVED.has(code)) return 'Esc luôn dùng để tạm dừng.';
     const owner = this.actionFor(code);
     if (owner && owner !== action) {
       const label = ACTIONS.find((a) => a.action === owner)!.label;

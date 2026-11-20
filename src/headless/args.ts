@@ -1,6 +1,7 @@
+import type { NightId } from '../sim';
 export interface HeadlessArgs {
   seed: number;
-  night: 1;
+  night: NightId;
   ticks: number;
   out: string;
   snapshotEvery: number;
@@ -12,7 +13,7 @@ export interface HeadlessArgs {
 export class ArgError extends Error {}
 
 const USAGE =
-  'usage: headless --seed <int> --night 1 [--scenario <file.json>] [--inputs <file.json>] --ticks <int> --out <file.jsonl> [--snapshot-every <int>]';
+  'usage: headless --seed <int> --night 1|2|3 [--scenario <file.json>] [--inputs <file.json>] --ticks <int> --out <file.jsonl> [--snapshot-every <int>]';
 
 export function parseArgs(argv: string[]): HeadlessArgs {
   const raw = new Map<string, string>();
@@ -34,13 +35,13 @@ export function parseArgs(argv: string[]): HeadlessArgs {
     if (!Number.isInteger(n) || n < min) throw new ArgError(`--${name} must be an integer >= ${min}`);
     return n;
   };
-  const night = int('night', true, 1);
-  if (night !== 1) throw new ArgError('only --night 1 exists in this build');
+  const night = int('night', true, 1)!;
+  if (night > 3) throw new ArgError('--night must be 1, 2 or 3');
   const out = raw.get('out');
   if (!out) throw new ArgError(`--out is required\n${USAGE}`);
   return {
     seed: int('seed', true, -(2 ** 31))!,
-    night: 1,
+    night: night as NightId,
     ticks: int('ticks', true, 0)!,
     out,
     snapshotEvery: int('snapshot-every', false, 1) ?? 10,

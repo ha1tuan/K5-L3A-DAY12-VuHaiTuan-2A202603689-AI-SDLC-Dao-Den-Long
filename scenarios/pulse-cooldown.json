@@ -1,7 +1,1 @@
-{
-  "random_motes": false,
-  "random_shades": false,
-  "player": {
-    "carried": 5
-  }
-}
+{"random_motes":false,"random_shades":false,"player":{"carried":10}}
