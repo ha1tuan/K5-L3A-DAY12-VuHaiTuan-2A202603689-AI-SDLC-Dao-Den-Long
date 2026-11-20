@@ -79,9 +79,15 @@ Nguồn: `PRD_v2.md` (Test Contract v1.1). Số chuẩn, bản đồ chuẩn và
 | A26 | Id đom đóm | `M1`, `M2`, … theo thứ tự xuất hiện, kể cả đom đóm rơi |
 | A27 | Âm thanh | Tổng hợp bằng WebAudio, không dùng file; chỉ nằm ở `src/client/audio`; headless không khởi tạo audio |
 | A28 | Màu | Cảnh 3D dùng bảng màu chuẩn F-10; UI dùng `#F5F1E6` / `#FF5A5F` / `#F2C14E`. Giữ phông Baloo 2 và HUD dây đèn lồng làm phần sáng tạo |
+| A29 | Điểm xuất phát Đêm 3 | PRD không ghi; chọn (0, 0, −30) trên mặt đất phía bắc, xa bậc và tháp, cũng là điểm hồi sinh sau khi rơi |
+| A30 | Lời Ông Đăng | Màn giới thiệu trước mỗi Đêm (tên đảo, ba câu của Ông Đăng, một dòng mẹo). Chỉ ở client: sim chưa bước tick nào cho tới khi người chơi nhấn "Vào Đêm"; thua thì chơi lại Đêm đó và nghe lại lời giới thiệu |
+| A31 | Trang trí và lối tắt khi thử | Cây, cỏ, đom đóm trang trí, sao và mây chỉ ở client, sinh bằng PRNG cố định theo số Đêm (không dùng `--seed`, không đụng sim). `?night=2\|3` trên URL vào thẳng Đêm đó để thử nhanh, Chuỗi 3 Đêm bắt đầu từ Đêm ấy |
 
 ### Nhật ký dùng AI
 
 | Thời điểm | Việc | Công cụ / model | AI sai ở đâu, đã sửa thế nào | Token / chi phí ước tính |
 |---|---|---|---|---|
 | P2-M0 | Đọc `PRD_v2.md`, so với Phase 1; grilling 14 câu; viết ADR-0002, cập nhật GLOSSARY, PLAN, NOTES, CLAUDE.md | Claude Code (Opus) | | |
+| P2-M1–M4 | Spec (issue #3), lõi sim + headless v1.1 theo TDD: số chuẩn, ADR-0002, địa hình cột, Lướt, Tạm dừng, Bóng Mực 5 trạng thái, Gió Lạc, Bùa Gió, gió, ba bản đồ (109 test) | Claude Code (Opus) | Lệnh `git rm` hỏng giữa chuỗi `&&` nên `world.ts` cũ còn nguyên, sim sinh 24 đom đóm thay vì 20: test bắt được, đã sửa. Nhiều test tự viết sai thời điểm (hai lần nhấn Lướt liền tick là một lần giữ; bùa hết hạn ở tick 601; người chơi đi lạc khỏi đảo trong test bùa; Bóng Mực đặt trong vùng an toàn nên vô hại theo luật): sửa test, sim đúng. Bóng Mực lùi chỉ 59 tick: lỗi đếm, đã sửa sim. Sai số dấu phẩy động khi đáp đất (y ≈ 2e-15): thêm dung sai 1e-9 | |
+| P2-M5 | `scenarios/cases.mjs` + `scripts/verify.mjs` cho v1.1: 46 case + 2 kiểm tra tĩnh, kỳ vọng tính tay | Claude Code (Opus) | `p2_fall` lệch 3 tick vì Mây nhặt Bùa Gió đặt sẵn giữa cầu rồi chạy nhanh hơn: bỏ bùa khỏi scenario thay vì sửa số kỳ vọng. Case `hit-drop` đọc snapshot tick 1 nhưng chu kỳ snapshot là 10: thêm `snapshotEvery: 1`. Đột biến `dash_speed` 14 → 13: verify bắt được ở 3 kiểm tra | |
+| P2-M6/M7 | Client WebGL với skill `game-engine` + Chrome: ba đảo 3D từ dữ liệu bản đồ, cây, đom đóm bay, Lướt, menu Tạm dừng, Cài đặt, Chuỗi 3 Đêm, âm thanh WebAudio, HUD F-08, lời Ông Đăng (5 test hàm thuần) | Claude Code (Opus) + Chrome | Qua ảnh chụp phát hiện: cảnh quá tối, cây che kín đảo, đom đóm ngả xanh (màu cộng lên nền xanh ngọc và bị sương pha), dốc Đêm 3 nghiêng ngược chiều, mặt bậc trùng màu nền, mũi tên chỉ đèn đè lên ô điểm: đã sửa cả. Tưởng camera không pan được, hoá ra công cụ rê chuột dùng toạ độ ảnh đã thu nhỏ. Đo được tab Chrome tự động bị hãm 1 FPS (khung cách đều 1008 ms, không có long task) nên không chờ được tới banner gió, đồng hồ đỏ và dòng nhắc nạp đèn trên UI | |
