@@ -210,3 +210,15 @@ dialog .slider { display: flex; justify-content: space-between; align-items: cen
 dialog .slider input { accent-color: var(--amber); width: 55%; }
 dialog .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #night-name { font-size: var(--step--1); color: var(--paper-dim); }
+
+/* ---------- Ông Đăng's night intro ---------- */
+.intro .night-tag { margin: 0; color: var(--amber-soft); font-weight: 700; }
+.intro h2 { margin: 0 0 12px; font-size: var(--step-5); line-height: 1; }
+.elder { margin: 0 0 16px; padding: 14px 18px; border-left: 3px solid var(--amber); background: rgba(22, 27, 61, 0.55); border-radius: 0 12px 12px 0; max-width: 38rem; }
+.elder figcaption { font-weight: 700; color: var(--amber-soft); margin-bottom: 4px; }
+.elder blockquote { margin: 0; }
+.elder blockquote p { margin: 0 0 6px; opacity: 0; animation: line-in 0.6s ease-out forwards; }
+.elder blockquote p:nth-child(2) { animation-delay: 0.9s; }
+.elder blockquote p:nth-child(3) { animation-delay: 1.8s; }
+@keyframes line-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .elder blockquote p { animation: none; opacity: 1; } }

@@ -7,6 +7,7 @@ import { Hud } from './hud';
 import { Controls } from './input/controls';
 import { KeyBindings, keyLabel } from './input/keybindings';
 import { WorldView } from './scene';
+import { NIGHT_INTROS } from './story';
 import { SettingsPanel } from './settings';
 import { loadSettings } from './settingsStore';
 import './style.css';
@@ -14,7 +15,7 @@ import './style.css';
 const T = CONTRACT_TUNING;
 const STEP = 1 / 60;
 const MAX_STEPS_PER_FRAME = 15;
-const NIGHT_NAMES: Record<NightId, string> = { 1: 'Đảo Bến', 2: 'Đảo Đôi', 3: 'Đảo Tháp Chuông' };
+const NIGHT_NAMES: Record<NightId, string> = { 1: NIGHT_INTROS[1].island, 2: NIGHT_INTROS[2].island, 3: NIGHT_INTROS[3].island };
 const DURATION: Record<NightId, number> = { 1: T.night1_duration_s, 2: T.night2_duration_s, 3: T.night3_duration_s };
 
 function safeStorage(): Storage | null {
@@ -47,8 +48,9 @@ window.addEventListener('keydown', unlockAudio);
 const titleEl = document.querySelector('#title') as HTMLElement;
 const endEl = document.querySelector('#ending') as HTMLElement;
 const nightLabel = document.querySelector('#night-name') as HTMLElement;
+const introEl = document.querySelector('#intro') as HTMLElement;
 
-type Phase = 'title' | 'playing' | 'ended';
+type Phase = 'title' | 'intro' | 'playing' | 'ended';
 let phase: Phase = 'title';
 let campaign: Campaign = startCampaign();
 let sim: Sim = createSim({ seed: 1, night: 1 });
@@ -70,12 +72,28 @@ function loadNight(night: NightId): void {
   nightLabel.textContent = `Đêm ${night} · ${NIGHT_NAMES[night]}`;
 }
 
+/** Ông Đăng introduces the night over its island, then the night starts on Vào đêm / Enter. */
 function play(night: NightId): void {
   loadNight(night);
-  phase = 'playing';
+  phase = 'intro';
   titleEl.hidden = true;
   endEl.hidden = true;
   settings.close();
+  const intro = NIGHT_INTROS[night];
+  (introEl.querySelector('.night-tag') as HTMLElement).textContent = `Đêm ${night} / 3`;
+  (introEl.querySelector('h2') as HTMLElement).textContent = intro.island;
+  (introEl.querySelector('blockquote') as HTMLElement).innerHTML = intro.lines.map((l) => `<p>${l}</p>`).join('');
+  (introEl.querySelector('p.hint') as HTMLElement).textContent = intro.hint;
+  (introEl.querySelector('#begin') as HTMLElement).textContent = `Vào Đêm ${night}`;
+  introEl.hidden = false;
+  (introEl.querySelector('#begin') as HTMLButtonElement).focus();
+}
+
+function beginNight(): void {
+  if (phase !== 'intro') return;
+  phase = 'playing';
+  introEl.hidden = true;
+  acc = 0;
   canvas.focus();
 }
 
@@ -181,6 +199,7 @@ settings.onMenu = () => {
   phase = 'title';
   settings.close();
   endEl.hidden = true;
+  introEl.hidden = true;
   titleEl.hidden = false;
 };
 
@@ -190,8 +209,13 @@ window.addEventListener('keydown', (e) => {
     togglePause();
   }
   if (e.code === 'Enter' && phase === 'title') newCampaign();
+  else if (e.code === 'Enter' && phase === 'intro') {
+    e.preventDefault();
+    beginNight();
+  }
 });
 document.querySelector('#start')!.addEventListener('click', newCampaign);
+document.querySelector('#begin')!.addEventListener('click', beginNight);
 document.querySelector('#again')!.addEventListener('click', continueAfterEnding);
 
 // --- loop -------------------------------------------------------------------
