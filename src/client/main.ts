@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CONTRACT_TUNING, createSim, nightDef, type NightId, type Sim, type SimEvent } from '../sim';
+import { GameAudio } from './audio';
 import { advanceCampaign, startCampaign, type Campaign } from './campaign';
 import { MobaCamera } from './camera';
 import { Hud } from './hud';
@@ -38,6 +39,10 @@ const controls = new Controls(bindings);
 const hud = new Hud(bindings);
 const settings = new SettingsPanel(bindings, storage);
 cam.sensitivity = loadSettings(storage).sensitivity;
+const audio = new GameAudio(loadSettings(storage).volume);
+const unlockAudio = () => audio.unlock();
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
 
 const titleEl = document.querySelector('#title') as HTMLElement;
 const endEl = document.querySelector('#ending') as HTMLElement;
@@ -60,6 +65,7 @@ function loadNight(night: NightId): void {
   tally = { motes: 0, lanterns: 0, stuns: 0 };
   controls.reset();
   pauseEdge = false;
+  audio.reset();
   cam.centerOn(sim.state.player.pos);
   nightLabel.textContent = `Đêm ${night} · ${NIGHT_NAMES[night]}`;
 }
@@ -87,6 +93,7 @@ settings.onChange = () => {
   hud.renderKeys();
   renderHints();
   cam.sensitivity = settings.values.sensitivity;
+  audio.setVolume(settings.values.volume);
 };
 
 function showEnding(): void {
@@ -140,6 +147,7 @@ function handleEvents(events: SimEvent[]): void {
     if (e.name === 'pulse') tally.stuns += e.data.stunned_ids.length;
   }
   world.onEvents(events, sim.state);
+  audio.onStep(events, sim.state);
 }
 
 // --- input wiring -----------------------------------------------------------
@@ -187,6 +195,11 @@ document.querySelector('#start')!.addEventListener('click', newCampaign);
 document.querySelector('#again')!.addEventListener('click', continueAfterEnding);
 
 // --- loop -------------------------------------------------------------------
+const tmpProj = new THREE.Vector3();
+const project = (p: readonly number[]) => {
+  tmpProj.set(p[0], p[1], p[2]).project(camera3d);
+  return { x: ((tmpProj.x + 1) / 2) * window.innerWidth, y: ((1 - tmpProj.y) / 2) * window.innerHeight, inFront: tmpProj.z < 1 };
+};
 function resize(): void {
   const { innerWidth: w, innerHeight: h } = window;
   renderer.setSize(w, h, false);
@@ -229,7 +242,8 @@ function frame(now: number): void {
 
   cam.update(dt, phase === 'playing' && !frozen && controls.isHeld('camera') ? sim.state.player.pos : null);
   world.sync(sim.state, frozen ? 0 : dt);
-  hud.update(sim.state, DURATION[sim.state.night]);
+  audio.setPaused(frozen || phase !== 'playing');
+  hud.update(sim.state, DURATION[sim.state.night], project);
   renderer.render(world.scene, camera3d);
   requestAnimationFrame(frame);
 }

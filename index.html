@@ -12,18 +12,28 @@
     <canvas id="game" tabindex="0" aria-label="Đảo Đèn Lồng về đêm"></canvas>
 
     <header class="hud-top">
-      <div class="night" aria-label="Thời gian còn lại của đêm">
-        <div class="track"><span id="moon"></span></div>
-        <span id="clock">5:00</span>
+      <div class="vitals">
+        <ul id="flames" class="flames" aria-label="Ngọn Lửa"></ul>
+        <span id="night-name">Đêm 1 · Đảo Bến</span>
       </div>
-      <ul id="lantern-string" aria-label="Đèn Lồng Lớn"></ul>
-      <p class="score"><span id="night-name">Đêm 1 · Đảo Bến</span><br /><span id="score">0</span> điểm</p>
+      <div class="center">
+        <div class="night" aria-label="Thời gian còn lại của đêm">
+          <div class="track"><span id="moon"></span></div>
+          <span id="clock">5:00</span>
+        </div>
+        <ul id="lantern-string" aria-label="Đèn Lồng Lớn"></ul>
+      </div>
+      <p class="score"><span class="lit-label">Đèn <b id="lit-count">0/5</b></span><br /><span id="score">0</span> điểm</p>
     </header>
 
+    <p id="banner" class="banner" role="status" hidden></p>
+    <div id="arrow" class="arrow" hidden aria-label="Đèn chưa sáng gần nhất"></div>
+
     <footer class="hud-bottom">
-      <div class="vitals">
-        <ul id="flames" class="flames"></ul>
-        <div class="jar-wrap" aria-label="Đom đóm đang mang">
+      <div class="spacer"></div>
+      <div class="jar-wrap" aria-label="Đom đóm đang mang">
+        <p id="prompt" class="prompt" role="status" hidden></p>
+        <div class="jar-row">
           <ul id="jar" class="jar"></ul>
           <span id="jar-count">0/10</span>
         </div>
