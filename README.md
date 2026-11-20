@@ -1,6 +1,6 @@
 # Đảo Đèn Lồng
 
-> **Video demo:** _chưa có. Kịch bản quay ở [docs/demo/SCRIPT.md](docs/demo/SCRIPT.md)._ · **Bản phát hành:** [Release v1.0.0](https://github.com/ha1tuan/K5-L3A-DAY12-VuHaiTuan-2A202603689-AI-SDLC-Dao-Den-Long/releases/tag/v1.0.0)
+> **Video demo:** [demo.mp4](https://github.com/ha1tuan/K5-L3A-DAY12-VuHaiTuan-2A202603689-AI-SDLC-Dao-Den-Long/releases/download/v1.0.0/demo.mp4) (đính kèm Release v1.0.0; kịch bản quay ở [docs/demo/SCRIPT.md](docs/demo/SCRIPT.md)) · **Bản phát hành:** [Release v1.0.0](https://github.com/ha1tuan/K5-L3A-DAY12-VuHaiTuan-2A202603689-AI-SDLC-Dao-Den-Long/releases/tag/v1.0.0)
 
 Game 3D góc nhìn từ trên xuống. Sương đen đã nuốt ánh sáng của ba hòn đảo. Bạn là **Mây**, người giữ đèn nhỏ tuổi đội nón lá treo một chiếc đèn lồng nhỏ. Qua ba Đêm liền, Mây gom đom đóm về thắp lại Đèn Lồng Lớn của từng đảo, rồi giữ cho đèn đủ dầu tới bình minh. Trên đường phải né **Bóng Mực** trôi ra từ sương, giờ còn biết lần tới hút dầu những chiếc đèn sắp cạn, và **Gió Lạc** chuyên giật đom đóm.
 
