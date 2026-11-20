@@ -1,6 +1,6 @@
 # Kiến trúc: Đảo Đèn Lồng
 
-> Ghi chú kiến trúc, cập nhật cho Phase 3 (Test Contract v1.2). Luật chơi: `PRD_v3.md` và giả định trong `docs/NOTES.md` (A1–A45). Thứ tự tick và mô hình đèn: `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002, ADR-0001). Thuật ngữ game: `GLOSSARY.md`.
+> Ghi chú kiến trúc, cập nhật cho Phase 3 (Test Contract v1.2). Luật chơi: `PRD_v3.md` và giả định trong `docs/NOTES.md` (A1–A49). Thứ tự tick và mô hình đèn: `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002, ADR-0001). Thuật ngữ game: `GLOSSARY.md`.
 > Từ vựng thiết kế theo skill `codebase-design`: **Module**, **Interface**, **Seam**, **Adapter**, **Depth**.
 
 ## 1. Bức tranh tổng

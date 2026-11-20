@@ -18,7 +18,7 @@ Evidence must come from running the real binary. Never hand-edit outputs or repo
 
 ## When a case fails
 
-- Find out **which side is wrong**: the game or the expectation. Re-derive the expected value by hand from `game.contract.json` and `docs/NOTES.md` (assumptions A1–A45, latest phase wins) and the tick order in the newest ADR (`docs/adr/0003-lantern-fuel-and-dawn-win.md`).
+- Find out **which side is wrong**: the game or the expectation. Re-derive the expected value by hand from `game.contract.json` and `docs/NOTES.md` (assumptions A1–A49, latest phase wins) and the tick order in the newest ADR (`docs/adr/0003-lantern-fuel-and-dawn-win.md`).
 - Never change an expectation just to match the output. If the expectation really was wrong, fix it and write the corrected hand calculation in the case's `req`.
 - If a new ticket changes a rule, update the case and say why in `docs/NOTES.md`. Do not delete it silently.
 

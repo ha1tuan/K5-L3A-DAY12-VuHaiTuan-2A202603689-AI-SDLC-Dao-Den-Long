@@ -107,7 +107,7 @@ Q nhảy, W nạp, E tỏa sáng, R chơi lại, **D lướt**, **Esc/P tạm d�
 
 ## Phase 3: Đèn cạn dầu (tag `phase-3`, Test Contract v1.2)
 
-> Nguồn: `PRD_v3.md` (Ticket-03, Change Request). Luật nào PRD v3 không nhắc giữ nguyên Phase 2. Mô hình đèn và thứ tự tick: `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002). Giả định mới: A32–A45 trong `docs/NOTES.md`. Breaking changes: `CHANGELOG.md`.
+> Nguồn: `PRD_v3.md` (Ticket-03, Change Request). Luật nào PRD v3 không nhắc giữ nguyên Phase 2. Mô hình đèn và thứ tự tick: `docs/adr/0003-lantern-fuel-and-dawn-win.md` (thay ADR-0002). Giả định mới: A32–A49 trong `docs/NOTES.md`. Breaking changes: `CHANGELOG.md`.
 
 ### Đánh giá tác động lên Phase 2
 
@@ -136,10 +136,10 @@ Q nhảy, W nạp, E tỏa sáng, R chơi lại, **D lướt**, **Esc/P tạm d�
 
 ### Tiêu chí hoàn thành Phase 3
 
-- [ ] DoD §9 của `PRD_v3.md` đạt hết, mỗi dòng có bằng chứng trong `docs/evidence/phase-3/`
-- [ ] Mỗi AC-01…AC-17 có ít nhất một case headless; AC-18 có test hàm thuần và ảnh chụp
-- [ ] Case Phase 1–2 không bị luật mới thay thế vẫn xanh; case bị thay thế đã sửa hoặc xoá có lý do
-- [ ] `CHANGELOG.md` liệt kê đủ breaking changes §10
+- [x] DoD §9 của `PRD_v3.md` đạt hết, mỗi dòng có bằng chứng trong `docs/evidence/phase-3/`
+- [x] Mỗi AC-01…AC-17 có ít nhất một case headless; AC-18 có test hàm thuần và ảnh chụp
+- [x] Case Phase 1–2 không bị luật mới thay thế vẫn xanh; case bị thay thế đã sửa hoặc xoá có lý do
+- [x] `CHANGELOG.md` liệt kê đủ breaking changes §10
 - [ ] Tag `phase-3` trên repo public
 
 ## Phase 4: khung (ticket chưa phát hành)

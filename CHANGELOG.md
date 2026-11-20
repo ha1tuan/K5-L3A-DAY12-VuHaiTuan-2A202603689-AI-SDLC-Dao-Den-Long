@@ -2,9 +2,9 @@
 
 Thay đổi theo từng phase. Mỗi phase là một tag (`phase-N`). Mục **Breaking** liệt kê thay đổi làm output headless hoặc luật chơi khác phase trước.
 
-## Phase 3 — Đèn cạn dầu (Test Contract v1.2) · _đang làm_
+## Phase 3 — Đèn cạn dầu (Test Contract v1.2) · tag `phase-3`
 
-Nguồn: `PRD_v3.md`. Quyết định: `docs/adr/0003-lantern-fuel-and-dawn-win.md`. Giả định: A32–A45 trong `docs/NOTES.md`.
+Nguồn: `PRD_v3.md`. Quyết định: `docs/adr/0003-lantern-fuel-and-dawn-win.md`. Giả định: A32–A49 trong `docs/NOTES.md`.
 
 ### Breaking
 
@@ -18,11 +18,19 @@ Nguồn: `PRD_v3.md`. Quyết định: `docs/adr/0003-lantern-fuel-and-dawn-win.
 - Công thức điểm thay toàn bộ: +5 mỗi đom đóm nạp/châm, +100 thắp lần đầu, +40 thắp lại, +5 hoặc +15 (Bóng đang `drain`) mỗi lần Tỏa Sáng trúng, bình minh +50 + `floor(fuel)` mỗi đèn sáng và +50 mỗi Ngọn Lửa. **Bỏ** thưởng thời gian.
 - Sức chứa đom đóm không còn cố định: `min(20, 10 + 2 × successful_lights)`.
 - Tuning thêm `fuel_max`, `fuel_decay_per_s`, `fuel_per_mote`, `relight_cost`, `win_ratio`, `drain_per_s`, `low_fuel_threshold`, `capacity_max`.
-- Scenario thêm `lit`/`fuel`/`ever_lit` cho đèn, `player.successful_lights`, `shades[].target_lantern_id`.
+- Scenario thêm `lit`/`fuel`/`ever_lit` cho đèn, `player.successful_lights`, `shades[].target_lantern_id`. Đèn `lit` thiếu `fuel` → 100; `target_lantern_id` không phải đèn của Đêm → exit 2 (A42).
+- Dầu lưu bằng số nguyên 1/60 và bị trừ ở bước 2b, trước khi tương tác. Ngưỡng "đầy" (`fuel` xuất ra 100.0) và "sắp cạn" (`fuel` xuất ra < 30.0) so trên giá trị một chữ số thập phân (A48, A49). Thưởng bình minh dùng phần nguyên của dầu chính xác (A46).
 
 ### Thêm
 
-- Cài đặt "Bảng màu dễ phân biệt" (lưu lại).
+- Cài đặt "Bảng màu dễ phân biệt" (lưu lại): Bóng Mực viền và mắt `#00B3FF`, cảnh báo trắng kèm ⚠.
+- Client: thanh dầu trên đèn sáng, nhấp nháy 1 Hz khi sắp cạn; đèn tắt xẹp 20% và giấy rách; tia hút dầu; HUD `đang_mang / sức_chứa` và số đèn cần giữ; lời nhắc châm dầu và thắp lại; màn kết thúc tính điểm v1.2; âm thanh `refuel` và `lantern_out`; lời Ông Đăng về dầu và bình minh.
+- Lối tắt dev `?demo=fuel`.
+
+### Test cũ bị thay
+
+- Hai test Vitest thắng bằng `all_lit` bị xoá (R3); test điểm nạp, thời lượng Đêm và hình dạng snapshot được viết lại theo v1.2.
+- Case verify `win-all-lit`, `score-win` đổi sang kỳ vọng "không kết thúc Đêm"; `idle-default-night`, `deposit-partial`, `light-one`, `p2_nights_*`, `p2_pause`, `p2_perf_full_night` được tính lại. Lý do ghi trong `req` của từng case.
 
 ## Phase 2 — Ba hòn đảo (Test Contract v1.1) · tag `phase-2`
 

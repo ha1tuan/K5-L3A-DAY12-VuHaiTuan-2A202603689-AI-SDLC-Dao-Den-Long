@@ -126,3 +126,22 @@ Nguồn: `PRD_v3.md` (Ticket-03 "Đèn cạn dầu", Test Contract v1.2). Luật
 | P3-M0 | Đọc `PRD_v3.md`, đối chiếu code; grilling 14 câu; viết ADR-0003, CHANGELOG, cập nhật GLOSSARY, PLAN, NOTES, CLAUDE.md, Architect, skill `verify-phase` | Claude Code (Opus) | Khi đối chiếu GLOSSARY phát hiện client và README Phase 2 tự đặt tên đảo "Đảo Đôi"/"Đảo Tháp Chuông", sai với PRD v2 ("Đảo Cau"/"Đảo Chuông"): đã sửa về đúng tên | |
 | P3-M1…M5 | TDD lõi sim/headless theo Contract v1.2 (dầu, châm dầu, thắp lại, sức chứa, hút dầu, thắng ở bình minh); 22 case verify mới, tính lại case Phase 1–2; thử 3 đột biến | Claude Code (Opus) | (1) AC-05 và AC-08 mâu thuẫn với thứ tự tick (dầu trừ ở bước 2b trước bước 5 và bước 8): chốt A48/A49, so ngưỡng trên giá trị `fuel` xuất ra. (2) Lần đầu viết `nearestWeak` sắp xếp đèn bằng `byId` (`localeCompare`) mỗi tick cho mỗi Bóng Mực, sim chậm ~5×, test gió Đêm 3 timeout: bỏ sắp xếp vì đèn vốn theo thứ tự id. (3) Ban đầu tính bước `wander` nhân `DT` hai lần, test bắt được trước khi commit | |
 | P3-M6 | Client: thanh dầu (sprite) trên đèn sáng, đèn và thanh nhấp nháy 1 Hz khi yếu, đèn tắt xẹp 20% và giấy rách (3D và HUD), tia hút dầu, HUD `đang_mang / sức_chứa` và "cần k" đèn, lời nhắc châm dầu/thắp lại, mũi tên chỉ cả đèn yếu, màn kết thúc tính điểm v1.2, âm thanh `refuel`/`lantern_out`, lời Ông Đăng mới, Cài đặt "Bảng màu dễ phân biệt" (AC-18: 5 test hàm thuần mới). Lối tắt dev `?demo=fuel` dựng cảnh có đủ trạng thái đèn | Claude Code (Opus) + Chrome headless qua DevTools Protocol | Ảnh chụp cho thấy Bóng Mực sinh sau khi bật bảng màu vẫn phát sáng tím vì vật liệu thân lấy màu cố định: đã sửa. AC-18 kiểm trên trình duyệt thật: tick ô, tải lại trang, ô vẫn tick, `localStorage` có `colorblind: true`, Bóng Mực xanh `#00B3FF`. Chưa chụp được màn kết thúc bình minh vì phải chờ hết 4 phút | |
+
+### Retro
+
+**Đạt:**
+- Lõi sim và headless theo Test Contract v1.2: 163 test Vitest, `npm run verify` 70/70 trên binary thật (68 case + 2 kiểm tra tĩnh). AC-01 đến AC-17 đều có case headless với kỳ vọng tính tay; mọi case chạy hai lần so từng byte.
+- Ba đột biến (ngưỡng đèn yếu, thưởng bình minh, tốc độ hút) đều làm đúng case tương ứng đỏ.
+- AC-18 có test hàm thuần và đã kiểm trên trình duyệt thật (tải lại trang vẫn giữ cài đặt).
+- Test và case cũ bị luật mới làm sai đều sửa hoặc xoá kèm lý do; không `skip`.
+
+**Chưa đạt / còn thiếu:**
+- Chưa chơi tay trọn một Đêm trên giao diện; chưa chụp màn kết thúc bình minh (phải chờ 4 phút).
+- Âm thanh `refuel`/`lantern_out` chưa được nghe thủ công.
+- Chưa có số đo token và chi phí cho Phase 3 (cần lấy từ `/cost`), không ghi số ước đoán.
+
+**AI sai ở đâu:**
+- Hai tiêu chí của PRD (AC-05, AC-08) mâu thuẫn với thứ tự tick đã chốt; chỉ lộ ra khi viết test trước. Đã hỏi lại và chốt A48, A49 thay vì sửa test cho khớp.
+- Một lần gọi hàm sắp xếp có `localeCompare` trong vòng lặp mỗi tick làm sim chậm ~5×: hook chạy test sau mỗi lần sửa bắt được qua một test timeout.
+- Màu phát sáng của Bóng Mực không theo bảng màu mới: chỉ thấy qua ảnh chụp.
+
