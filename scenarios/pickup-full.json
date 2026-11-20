@@ -1,0 +1,14 @@
+{
+  "random_motes": false,
+  "random_shades": false,
+  "player": {
+    "carried": 5
+  },
+  "motes": [
+    [
+      0,
+      0,
+      0.5
+    ]
+  ]
+}
