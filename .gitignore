@@ -5,3 +5,6 @@ dist/
 .env
 data/
 release/
+
+# Video demo nằm ở Release v1.0.0 (vượt giới hạn 100 MB của GitHub)
+docs/demo/*.mp4
