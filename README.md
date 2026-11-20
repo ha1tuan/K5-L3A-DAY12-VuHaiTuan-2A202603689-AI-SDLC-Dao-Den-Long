@@ -4,7 +4,7 @@
 
 Game 3D góc nhìn từ trên xuống. Sương đen đã nuốt ánh sáng của ba hòn đảo. Bạn là **Mây**, người giữ đèn nhỏ tuổi đội nón lá treo một chiếc đèn lồng nhỏ. Qua ba Đêm liền, Mây gom đom đóm về thắp lại Đèn Lồng Lớn của từng đảo trước khi trời sáng. Trên đường phải né **Bóng Mực** trôi ra từ sương và **Gió Lạc** chuyên giật đom đóm.
 
-![Đêm 2 – Đảo Đôi](docs/evidence/phase-2/client-night2.jpg)
+![Đêm 2 – Đảo Cau](docs/evidence/phase-2/client-night2.jpg)
 
 Bài làm lab *AI SDLC* (Day 12) của 2A202603689-VuHaiTuan. Tài liệu của lab nằm ở [LAB.md](LAB.md).
 
@@ -42,8 +42,8 @@ Trong menu Tạm dừng có thể đổi phím, chỉnh âm lượng và độ n
 | Đêm | Đảo | Thời gian | Đèn | Điểm mới |
 |---|---|---|---|---|
 | 1 | Đảo Bến | 5:00 | 5 | Đảo tròn bán kính 40 m |
-| 2 | Đảo Đôi | 5:30 | 6 | Hai đảo nối bằng cầu tre không lan can; hai bục nhảy hất qua khe trời; Gió Lạc; Bùa Gió giữa cầu |
-| 3 | Đảo Tháp Chuông | 6:00 | 7 | Bậc cao 3 m và 6 m, hai dốc lên bậc, tháp chuông ở giữa; Bóng Mực nhanh hơn (4.5 m/s); gió mạnh |
+| 2 | Đảo Cau | 5:30 | 6 | Hai đảo nối bằng cầu tre không lan can; hai bục nhảy hất qua khe trời; Gió Lạc; Bùa Gió giữa cầu |
+| 3 | Đảo Chuông | 6:00 | 7 | Bậc cao 3 m và 6 m, hai dốc lên bậc, tháp chuông ở giữa; Bóng Mực nhanh hơn (4.5 m/s); gió mạnh |
 
 Trước mỗi Đêm, **Ông Đăng** giới thiệu hòn đảo và mẹo của Đêm đó. Thắng thì điểm Đêm được cộng vào tổng và sang Đêm kế. Thua thì chơi lại chính Đêm đó, không cộng gì. Thắng Đêm 3 thì tới **Màn Bình Minh** với tổng điểm cả chuỗi.
 
@@ -115,7 +115,7 @@ Mọi phần dưới đây chỉ nằm ở lớp giao diện (`src/client/`). Ch
 - **Vệt lướt, dải lụa Gió Lạc gợn sóng, vòng trú ẩn 6 m** quanh đèn đã sáng, và đảo sáng dần theo số đèn đã thắp.
 - **Bảng điểm cuối Đêm:** tách điểm theo từng nguồn, cộng dồn tổng của cả chuỗi.
 
-| Ông Đăng giới thiệu Đêm | Đêm 3 – Đảo Tháp Chuông | Menu Tạm dừng |
+| Ông Đăng giới thiệu Đêm | Đêm 3 – Đảo Chuông | Menu Tạm dừng |
 |---|---|---|
 | ![](docs/evidence/phase-2/client-intro-ong-dang.jpg) | ![](docs/evidence/phase-2/client-night3.jpg) | ![](docs/evidence/phase-2/client-pause-menu.jpg) |
 

@@ -18,7 +18,7 @@ export const NIGHT_INTROS: Record<NightId, NightIntro> = {
     hint: 'Nhặt đom đóm, đứng cạnh đèn và nạp. Thắp đủ 5 đèn trước bình minh.',
   },
   2: {
-    island: 'Đảo Đôi',
+    island: 'Đảo Cau',
     lines: [
       'Bên kia cầu tre còn một hòn đảo nữa. Cầu không có lan can, con bước cho khéo.',
       'Bục vàng sẽ hất con bay qua khe trời, nhanh hơn đi bộ nhiều.',
@@ -27,7 +27,7 @@ export const NIGHT_INTROS: Record<NightId, NightIntro> = {
     hint: '6 đèn trên hai đảo. Bùa Gió đỏ giữa cầu cho con chạy nhanh và lướt không cần chờ.',
   },
   3: {
-    island: 'Đảo Tháp Chuông',
+    island: 'Đảo Chuông',
     lines: [
       'Đêm cuối rồi. Tháp chuông đứng giữa đảo, đèn treo cả trên các bậc cao.',
       'Leo dốc mà lên, hoặc nhờ bục nhảy. Rơi khỏi mép là mất một ngọn lửa đấy.',
