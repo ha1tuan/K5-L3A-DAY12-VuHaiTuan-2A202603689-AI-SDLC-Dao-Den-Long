@@ -2,6 +2,33 @@
 
 Thay đổi theo từng phase. Mỗi phase là một tag (`phase-N`). Mục **Breaking** liệt kê thay đổi làm output headless hoặc luật chơi khác phase trước.
 
+## Phase 4 — Bình minh: phát hành v1.0.0 (Test Contract v1.3) · tag `phase-4`, Release `v1.0.0`
+
+Nguồn: `PRD_v4.md`. Giả định: A50–A60 trong `docs/NOTES.md`. Luật chơi và output headless **không đổi** (verify 70/70 như Phase 3).
+
+### Breaking
+
+- `contract_version` → `"1.3"`; `game.contract.json` thêm `bench_cmd` và `soak_cmd`.
+- `npm start` chạy server Node của game (`dist/serve.js`) thay cho `vite preview`. Cổng vẫn 4173.
+- Cỡ chữ giao diện tăng: không còn chữ nào dưới 18 px ở 1280×720.
+
+### Thêm
+
+- **Benchmark** (`node scripts/bench.mjs --seed 42 --duration 30 --out bench.json`): Chrome 1280×720, vsync tắt, cảnh chuẩn của §1.2 (200 Bóng Mực `wander`, 100 đom đóm, L1–L3 sáng), camera bay vòng 15 s, 3 s khởi động. Sim có `createSim({bench: true})`.
+- **Soak** (`node --expose-gc --single-threaded --max-semi-space-size=1 dist/soak.js --seed 7 --nights 10 --out soak.json`): 10 Đêm trong một tiến trình, input ngẫu nhiên theo seed.
+- **Bảng xếp hạng cục bộ:** nhập tên sau Màn Bình Minh hoặc khi thua, top 10 lưu ở `data/leaderboard.json`, màn hình từ menu chính, `npm start -- --export-leaderboard out.json`. Tên có dấu tiếng Việt được nhận.
+- **Dễ tiếp cận:** đổi phím cho cả 4 hướng di chuyển (mặc định phím mũi tên, đi theo hướng camera); phụ đề cho Bóng Mực xuất hiện (kèm mũi tên đỏ ở mép màn hình), gió sắp thổi, 10 s cuối, đèn sắp cạn dầu; "Giảm chuyển động"; "Chữ lớn ×1.25".
+- `LICENSE` (MIT), `CREDITS.md` đầy đủ, `docs/RETRO.md`, `npm run package` tạo bản phát hành `.zip`.
+- Lối tắt dev `?demo=end`, `?bench=1`.
+
+### Hiệu năng
+
+- Bóng Mực dùng chung hình khối và vật liệu (trước đây mỗi con 4 vật liệu riêng). Cảnh bench 200 Bóng Mực: `p1_low_fps` 35 → 108, `avg_fps` 156 → 318 trên máy tự đo.
+
+### Test cũ bị thay
+
+- Hai test `F-06 Cài đặt` so cả đối tượng cài đặt; đã thêm hai khoá mới `reduceMotion`, `largeText` vào kỳ vọng.
+
 ## Phase 3 — Đèn cạn dầu (Test Contract v1.2) · tag `phase-3`
 
 Nguồn: `PRD_v3.md`. Quyết định: `docs/adr/0003-lantern-fuel-and-dawn-win.md`. Giả định: A32–A49 trong `docs/NOTES.md`.

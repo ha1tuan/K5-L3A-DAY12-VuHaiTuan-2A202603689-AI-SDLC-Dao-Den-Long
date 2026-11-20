@@ -145,3 +145,53 @@ Nguồn: `PRD_v3.md` (Ticket-03 "Đèn cạn dầu", Test Contract v1.2). Luật
 - Một lần gọi hàm sắp xếp có `localeCompare` trong vòng lặp mỗi tick làm sim chậm ~5×: hook chạy test sau mỗi lần sửa bắt được qua một test timeout.
 - Màu phát sáng của Bóng Mực không theo bảng màu mới: chỉ thấy qua ảnh chụp.
 
+
+## Phase 4
+
+Nguồn: `PRD_v4.md` (Ticket-04 "Bình minh: phát hành v1.0.0", Test Contract v1.3). Không đổi luật chơi; thêm benchmark, soak, bảng xếp hạng, dễ tiếp cận và đóng gói. Bảng dưới ghi những chỗ PRD để mở, đã chốt qua phiên grilling (10 câu).
+
+### Giả định
+
+| # | Chủ đề | Giả định |
+|---|---|---|
+| A50 | Quy trình | Nhánh `feat/phase-4`; contract v1.3 trước, rồi soak, bench, bảng xếp hạng, dễ tiếp cận, đóng gói. Bằng chứng ở `docs/evidence/phase-4/`. Merge, tag `phase-4` và Release `v1.0.0` chỉ làm khi người dùng đồng ý |
+| A51 | Chạy bench | Game là bản web nên `bench_cmd` là `node scripts/bench.mjs`: tự phục vụ `dist/web`, mở Chrome có sẵn trên máy (hoặc `CHROME_PATH`) qua `playwright-core`, cửa sổ 1280×720, cờ `--disable-gpu-vsync --disable-frame-rate-limit`. Trên Linux thêm `--ozone-platform=x11`: đo được dưới Wayland các cờ tắt vsync bị bỏ qua (avg 118.9 fps, đúng tần số màn 120 Hz) còn qua XWayland thì vượt (138 fps) |
+| A52 | Cảnh bench | `createSim({bench: true})` trong sim: Đêm 1, 200 Bóng Mực `wander` và 100 đom đóm rải đều (theo diện tích) trên đĩa bán kính 38 m của đảo bằng PRNG seed 42, L1–L3 sáng đầy dầu. Bước bench chỉ cho Bóng Mực lang thang theo luật `wander` (đổi đích ngẫu nhiên trong 8 m, 50% tốc độ) và vẫn bị đẩy khỏi vùng an toàn; chúng **không** chuyển sang `chase`/`drain` vì sát thương tắt và Mây đứng ở tâm, nếu đuổi thì cả 200 con dồn về một chỗ. Đồng hồ đứng yên, input bị bỏ qua. HUD vẫn hiện như lúc chơi |
+| A53 | `load_ms` | Từ lúc tiến trình Node của bench bắt đầu (`performance.timeOrigin`) tới khung `requestAnimationFrame` đầu tiên của cảnh bench, gồm cả mở server và Chrome |
+| A54 | `peak_mem_mb` | Tổng RSS của cả cây tiến trình Chrome (trình duyệt, GPU, renderer) lấy bằng `ps` mỗi 250 ms trong lúc đo; `null` trên Windows (không có `ps`) |
+| A55 | Số liệu khung | `dt` lấy từ dấu thời gian `requestAnimationFrame`; chỉ tính khung sau 3 s khởi động tới hết `--duration`. `frame_ms_p95` là phân vị theo hạng gần nhất (`ceil(0.95·N)`). Log `bench.log` ghi 12 khung chậm nhất để chẩn đoán |
+| A56 | Soak | `dist/soak.js`, thuần Node, không cần trình duyệt. Input ngẫu nhiên lấy từ PRNG riêng (seed của Đêm XOR `0x9e3779b9`) để không đụng PRNG của sim. Mỗi tick bốc độc lập 5% nhảy, 3% lướt, 2% tỏa sáng, 10% tương tác (giữ trong tick đó; sim tự bắt cạnh lên). Mỗi Đêm chạy tới khi kết thúc hoặc hết `timeLeftS·60 + 1` tick. Lỗi ném ra thì đếm `crashes` và ghi `"crash"` vào `results` |
+| A57 | Bộ nhớ soak | `mem_start_mb` đo ngay sau `createSim` Đêm đầu; `mem_end_mb` sau khi Đêm cuối kết thúc và bị bỏ; cả hai gọi `gc()` trước (`--expose-gc`). Không cờ V8 thì tỉ lệ 1.39 (60.9 → 84.4 MB) dù heap đứng yên ~4 MB suốt 40 Đêm, tức không rò rỉ: phần tăng là luồng nền và vùng nhớ trẻ của V8 khởi động. `soak_cmd` thêm `--single-threaded --max-semi-space-size=1`: tỉ lệ 1.10 ổn định qua 3 lần chạy |
+| A58 | Bảng xếp hạng | Server Node (`dist/serve.js`, `npm start`) ghi `data/leaderboard.json` (ghi file tạm rồi đổi tên); trang không có server thì lưu vào `localStorage`. `score` là Tổng điểm game của chuỗi đang chơi, `nights_won` = số Đêm đã thắng trong chuỗi, `seed` = seed của Đêm vừa kết thúc. Mời nhập tên sau Màn Bình Minh và sau mỗi Đêm thua; mỗi màn kết lưu một lần. Tên chuẩn hoá NFC, `^[\p{L}\p{N}_]{3,12}$`. Bằng điểm: `achieved_at` sớm hơn (so theo thời điểm thật, không theo chuỗi) đứng trên; trùng cả thời điểm thì ai lưu trước đứng trên. Phần luật là module thuần `src/leaderboard` dùng chung cho client và server |
+| A59 | Dễ tiếp cận | Bốn hành động di chuyển mới (mặc định phím mũi tên vì W/D đã dùng), đi theo hướng camera, giữ phím thì bỏ đích click. "Giảm chuyển động" tắt mọi animation/nhấp nháy CSS và vòng loé 3D khi bị chạm, tỏa sáng, đèn đổi trạng thái; game không có rung camera. Chữ nhỏ nhất `1.125rem` = 18 px; "Chữ lớn" đặt cỡ gốc 125%. Phụ đề: Bóng Mực xuất hiện, gió sắp thổi, đếm 10 s cuối, đèn L*k* sắp cạn dầu (một lần mỗi khi xuống dưới 30). Mũi tên đỏ ở mép màn hình chỉ tối đa 4 Bóng Mực gần nhất đang ở ngoài khung nhìn: con mới xuất hiện (5 s) hoặc đang đuổi |
+| A60 | Bản phát hành | `npm run package` tạo `release/dao-den-long-v1.0.0.zip`: `dist/` (web, headless, soak, server), contract, LICENSE, CREDITS, `PLAY.md`. Chỉ cần Node 18+: `node dist/serve.js --open`. Bench cần mã nguồn và Chrome nên không nằm trong zip |
+
+### Nhật ký dùng AI
+
+| Thời điểm | Việc | Công cụ / model | AI sai ở đâu, đã sửa thế nào | Token / chi phí ước tính |
+|---|---|---|---|---|
+| P4-M0 | Đọc `PRD_v4.md` (lần đầu không thấy file trên đĩa, đã báo và chờ), khảo sát máy và repo, grilling 10 câu | Claude Code (Opus) | | |
+| P4-M1…M3 | TDD: cảnh bench trong sim (4 test), soak (3 test), bảng xếp hạng (6 test) và server (1 test), contract v1.3 | Claude Code (Opus) | Soak lần đầu ra `mem_end` 1.39 × `mem_start`, trượt ngưỡng 1.2. Không sửa cách đo: đo heap qua 40 Đêm thấy đứng yên, kết luận không rò rỉ, rồi thử cờ V8 (A57) | |
+| P4-M4 | Bench runner + chế độ `?bench=1` | Claude Code (Opus) + Chrome qua playwright-core | (1) Bench đầu ra 118.9 fps: nghi bị vsync chặn, đối chiếu tần số màn 119.99 Hz rồi tìm ra Wayland bỏ qua cờ (A51). (2) `p1_low_fps` chỉ 35, sát ngưỡng 30: log khung chậm cho thấy chúng tụ theo góc camera, tìm ra mỗi Bóng Mực có 4 vật liệu và hình khối riêng; dùng chung thì `p1_low` lên 108. (3) Từng ghi chỉ số "CPU work" lấy từ dấu thời gian rAF, thực ra gồm cả thời gian chờ nên sai nghĩa: đã bỏ trước khi lưu bằng chứng | |
+| P4-M5 | Client: đổi phím 4 hướng, phụ đề + mũi tên Bóng Mực, Giảm chuyển động, Chữ lớn, chữ ≥ 18 px, màn Bảng xếp hạng, ô lưu điểm (9 test hàm thuần) | Claude Code (Opus) + Chrome | Hai test cài đặt cũ so cả đối tượng nên đỏ khi thêm khoá: thêm khoá vào kỳ vọng. Ảnh chụp cho thấy màn kết thúc có ô lưu điểm cao hơn 720 px, mất tiêu đề: cho màn hình cuộn và thu gọn. Phím gõ tên bị hiểu thành phím chơi (R = chơi lại): bỏ qua phím khi đang gõ trong ô nhập | |
+| P4-M6 | `scripts/ui-check.mjs` (bằng chứng giao diện tự động), LICENSE, CREDITS, CHANGELOG, README, RETRO, kịch bản video, đóng gói zip và chạy thử zip ở thư mục sạch | Claude Code (Opus) | CREDITS cũ ghi "game chưa có âm thanh" trong khi đã có âm thanh WebAudio từ Phase 2: đã sửa | |
+
+### Đánh giá (checklist PRD v4)
+
+| # | Hạng mục | Kết quả trên máy tự đo | Bằng chứng |
+|---|---|---|---|
+| 1 | Benchmark | `avg_fps` 318.1, `p1_low_fps` 107.7, `frame_ms_p95` 4.6, `load_ms` 2133, thoát mã 0 (Intel Core Ultra 5 225H, iGPU Arc, Linux, Chrome 157). Đạt trên máy này; máy chấm chưa đo | `docs/evidence/phase-4/bench.json`, `bench.log` |
+| 2 | Soak | `crashes` 0, `mem_end_mb` 70.3 ≤ 1.2 × 64.0 = 76.8 | `docs/evidence/phase-4/soak.json`, `soak.log` |
+| 3 | Bảng xếp hạng | Top 10, sắp đúng, còn sau khi tắt mở server, xuất JSON đúng thứ tự | test `tests/leaderboard`, `tests/server`; `ui/ui-check.txt`, `ui/4-ending-saved.png`, `ui/5-leaderboard.png` |
+| 4 | Dễ tiếp cận | Đổi phím + báo trùng + khôi phục + lưu; phụ đề và mũi tên; giảm chuyển động; chữ nhỏ nhất 18 px, chữ lớn 22.5 px | `tests/client/a11y.test.ts`; `ui/ui-check.txt` và ảnh 2–3 |
+| 5 | Đóng gói | 3 lệnh từ clone sạch; README/CHANGELOG/CREDITS/LICENSE; zip chạy được ở thư mục sạch | README; `npm run package` |
+| 6 | Contract v1.3 | `contract_version`, `bench_cmd`, `soak_cmd` | `game.contract.json`, verify kiểm `"1.3"` |
+| 7 | Retro & demo | Retro: `docs/RETRO.md`. Video: **chưa đạt** | |
+| 8 | DoD | 190 test, verify 70/70; tag và Release chờ duyệt | `docs/evidence/phase-4/verify-report.md` |
+
+**Chưa đạt / còn thiếu:**
+- **Video demo** chưa có: máy không có ffmpeg và agent không tự chơi rồi quay được. Kịch bản quay ở `docs/demo/SCRIPT.md`; cần người quay.
+- **Số trên máy chấm** chưa biết. Số tự đo chỉ để tham khảo.
+- **Token/chi phí** của cả 4 phase chưa có số thật (cần lấy từ `/cost` hoặc trang usage). Không ghi số ước đoán.
+- Bench chỉ thử trên Linux; nhánh macOS/Windows của `scripts/bench.mjs` (đường dẫn Chrome, `peak_mem_mb` null trên Windows) chưa chạy thật.
+- Vẫn chưa chơi tay trọn ba Đêm tới Màn Bình Minh; màn kết thúc và lưu điểm được kiểm bằng `?demo=end`.

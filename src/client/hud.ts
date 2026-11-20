@@ -1,6 +1,6 @@
 import { CONTRACT_TUNING, isFullFuel, secondsToTicks, WIND_EVERY_TICKS, WIND_WARN_TICKS, type Lantern, type SimState, type Vec3 } from '../sim';
 import { depositCost, fuelFraction, isWeakLantern, winTarget } from './lanternLook';
-import { ACTIONS, keyLabel, type KeyBindings } from './input/keybindings';
+import { ACTIONS, keyLabel, MOVE_ACTIONS, type KeyBindings } from './input/keybindings';
 
 const T = CONTRACT_TUNING;
 const PULSE_CD_TICKS = secondsToTicks(T.pulse_cooldown_s);
@@ -44,7 +44,7 @@ export class Hud {
   }
 
   renderKeys(): void {
-    const shown = ACTIONS.filter((a) => a.action !== 'restart');
+    const shown = ACTIONS.filter((a) => a.action !== 'restart' && !MOVE_ACTIONS.includes(a.action));
     this.keys.innerHTML = shown
       .map((a) => `<li data-action="${a.action}"><kbd>${keyLabel(this.bindings.all[a.action])}</kbd><span>${a.label}</span></li>`)
       .join('');

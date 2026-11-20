@@ -1,11 +1,14 @@
 {
   "name": "dao-den-long",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "vite build && esbuild src/headless/main.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js",
-    "start": "vite preview --port 4173 --open",
+    "build": "vite build && esbuild src/headless/main.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js && esbuild src/headless/soakMain.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/soak.js && esbuild src/server/serve.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/serve.js",
+    "start": "node dist/serve.js --open",
+    "bench": "node scripts/bench.mjs",
+    "package": "node scripts/package.mjs",
+    "soak": "node --expose-gc --single-threaded --max-semi-space-size=1 dist/soak.js",
     "dev": "vite",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -15,6 +18,7 @@
     "@types/node": "^26.6.6",
     "@types/three": "^0.187.0",
     "esbuild": "^0.28.2",
+    "playwright-core": "^1.49.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"

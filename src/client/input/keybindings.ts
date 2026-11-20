@@ -1,6 +1,10 @@
-export type Action = 'jump' | 'interact' | 'pulse' | 'dash' | 'pause' | 'restart' | 'camera';
+export type Action = 'moveUp' | 'moveDown' | 'moveLeft' | 'moveRight' | 'jump' | 'interact' | 'pulse' | 'dash' | 'pause' | 'restart' | 'camera';
 
 export const ACTIONS: { action: Action; label: string }[] = [
+  { action: 'moveUp', label: 'Đi lên' },
+  { action: 'moveDown', label: 'Đi xuống' },
+  { action: 'moveLeft', label: 'Đi trái' },
+  { action: 'moveRight', label: 'Đi phải' },
   { action: 'jump', label: 'Nhảy' },
   { action: 'interact', label: 'Nạp đèn' },
   { action: 'pulse', label: 'Tỏa sáng' },
@@ -11,7 +15,13 @@ export const ACTIONS: { action: Action; label: string }[] = [
 ];
 
 export type Bindings = Record<Action, string>;
-export const DEFAULT_BINDINGS: Bindings = { jump: 'KeyQ', interact: 'KeyW', pulse: 'KeyE', dash: 'KeyD', pause: 'KeyP', restart: 'KeyR', camera: 'Space' };
+export const DEFAULT_BINDINGS: Bindings = {
+  moveUp: 'ArrowUp',
+  moveDown: 'ArrowDown',
+  moveLeft: 'ArrowLeft',
+  moveRight: 'ArrowRight',
+  jump: 'KeyQ', interact: 'KeyW', pulse: 'KeyE', dash: 'KeyD', pause: 'KeyP', restart: 'KeyR', camera: 'Space',
+};
 
 const STORAGE_KEY = 'dao-den-long.keys.v2';
 const RESERVED = new Set(['Escape']);
@@ -77,3 +87,6 @@ export function keyLabel(code: string): string {
   if (code.startsWith('Digit')) return code.slice(5);
   return ARROWS[code] ?? code.replace(/(Left|Right)$/, '');
 }
+
+/** The four movement actions (PRD v4 §4); the HUD key strip leaves them out. */
+export const MOVE_ACTIONS: readonly Action[] = ['moveUp', 'moveDown', 'moveLeft', 'moveRight'];

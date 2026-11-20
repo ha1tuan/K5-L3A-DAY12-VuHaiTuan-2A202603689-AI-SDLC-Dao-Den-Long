@@ -7,9 +7,13 @@ export interface Settings {
   sensitivity: number;
   /** "Bảng màu dễ phân biệt" (PRD v3 §5.6, A44). */
   colorblind: boolean;
+  /** PRD v4 §4: no camera shake, no screen flashes or blinking. */
+  reduceMotion: boolean;
+  /** PRD v4 §4: UI text ×1.25. */
+  largeText: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { volume: 0.7, sensitivity: 1, colorblind: false };
+export const DEFAULT_SETTINGS: Settings = { volume: 0.7, sensitivity: 1, colorblind: false, reduceMotion: false, largeText: false };
 const KEY = 'dao-den-long.settings.v2';
 type Store = Pick<Storage, 'getItem' | 'setItem'> | null;
 
@@ -25,6 +29,8 @@ export function loadSettings(storage: Store): Settings {
       volume: clampOr(s.volume, 0, 1, DEFAULT_SETTINGS.volume),
       sensitivity: clampOr(s.sensitivity, 0.5, 2, DEFAULT_SETTINGS.sensitivity),
       colorblind: s.colorblind === true,
+      reduceMotion: s.reduceMotion === true,
+      largeText: s.largeText === true,
     };
   } catch {
     return { ...DEFAULT_SETTINGS };

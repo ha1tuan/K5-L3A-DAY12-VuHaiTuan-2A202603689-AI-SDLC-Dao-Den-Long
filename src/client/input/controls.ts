@@ -1,5 +1,6 @@
 import type { ControlState, Vec3 } from '../../sim';
 import { moveToward } from './clickToMove';
+import { keyMove } from './keyMove';
 import type { Action, KeyBindings } from './keybindings';
 
 /**
@@ -15,7 +16,7 @@ export class Controls {
 
   constructor(private readonly bindings: KeyBindings) {
     window.addEventListener('keydown', (e) => {
-      if (!this.enabled) return;
+      if (!this.enabled || e.target instanceof HTMLInputElement) return; // typing a name is not playing
       const a = this.bindings.actionFor(e.code);
       if (!a) return;
       e.preventDefault();
@@ -37,9 +38,16 @@ export class Controls {
     return this.held.has(a);
   }
 
-  sample(playerPos: Vec3): ControlState {
-    const { move, arrived } = moveToward(playerPos, this.target);
+  /** forward: the camera's view direction on the ground, for the movement keys. */
+  sample(playerPos: Vec3, forward: [number, number] = [0, -1]): ControlState {
+    const keyed = keyMove(
+      { up: this.held.has('moveUp'), down: this.held.has('moveDown'), left: this.held.has('moveLeft'), right: this.held.has('moveRight') },
+      forward,
+    );
+    if (keyed) this.target = null; // the keys take over from a click target
+    const { move: clicked, arrived } = moveToward(playerPos, this.target);
     if (arrived) this.target = null;
+    const move = keyed ?? clicked;
     const on = (a: Action) => this.held.has(a) || this.latched.has(a);
     const ctrl: ControlState = { move, camYawDeg: 0, jump: on('jump'), interact: on('interact'), pulse: on('pulse'), dash: on('dash'), pause: false };
     this.latched.clear();

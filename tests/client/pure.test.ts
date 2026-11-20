@@ -36,8 +36,8 @@ describe('F-04 Chuỗi 3 Đêm', () => {
 describe('F-06 Cài đặt', () => {
   it('AC-06.1: volume and mouse sensitivity survive a reload', () => {
     const st = memoryStorage();
-    saveSettings(st, { volume: 0.3, sensitivity: 1.6, colorblind: false });
-    expect(loadSettings(st)).toEqual({ volume: 0.3, sensitivity: 1.6, colorblind: false });
+    saveSettings(st, { volume: 0.3, sensitivity: 1.6, colorblind: false, reduceMotion: false, largeText: false });
+    expect(loadSettings(st)).toEqual({ volume: 0.3, sensitivity: 1.6, colorblind: false, reduceMotion: false, largeText: false }); // v4 adds the last two
   });
 
   it('falls back to defaults for missing, broken or out-of-range values', () => {
@@ -46,7 +46,7 @@ describe('F-06 Cài đặt', () => {
     st.setItem('dao-den-long.settings.v2', '{not json');
     expect(loadSettings(st)).toEqual(DEFAULT_SETTINGS);
     st.setItem('dao-den-long.settings.v2', JSON.stringify({ volume: 7, sensitivity: 'fast', colorblind: 'yes' }));
-    expect(loadSettings(st)).toEqual({ volume: 1, sensitivity: DEFAULT_SETTINGS.sensitivity, colorblind: false });
+    expect(loadSettings(st)).toEqual({ ...DEFAULT_SETTINGS, volume: 1, sensitivity: DEFAULT_SETTINGS.sensitivity, colorblind: false });
   });
 
   it('adds D for Lướt and P for Tạm dừng to the QWER defaults; Esc stays reserved for pausing', () => {

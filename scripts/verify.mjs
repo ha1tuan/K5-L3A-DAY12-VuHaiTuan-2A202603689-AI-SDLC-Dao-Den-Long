@@ -2,7 +2,7 @@
 // End-to-end verification against the REAL headless binary (Test Contract v1.2).
 // Writes evidence to docs/evidence/<phase>/ and exits non-zero if anything fails.
 //
-//   node scripts/verify.mjs [--phase phase-3] [--only <case-name>]
+//   node scripts/verify.mjs [--phase phase-4] [--only <case-name>]
 //
 // Requires `npm run build` first (npm run verify does both).
 
@@ -18,7 +18,7 @@ const arg = (k, d) => {
   const i = process.argv.indexOf(k);
   return i > 0 ? process.argv[i + 1] : d;
 };
-const PHASE = arg('--phase', 'phase-3');
+const PHASE = arg('--phase', 'phase-4');
 const ONLY = arg('--only', null);
 const EVIDENCE = join(ROOT, 'docs', 'evidence', PHASE);
 const OUT = join(EVIDENCE, 'out');
@@ -177,7 +177,9 @@ const STANDARD_TUNING = {
 
 function tuningChecks() {
   const errs = [];
-  if (contract.contract_version !== '1.2') errs.push('contract_version must be "1.2"');
+  if (contract.contract_version !== '1.3') errs.push('contract_version must be "1.3"');
+  // v1.3 (PRD v4 §6): the bench and soak commands are declared
+  for (const k of ['bench_cmd', 'soak_cmd']) if (typeof contract[k] !== 'string' || !contract[k].trim()) errs.push(`${k} missing`);
   if ('per_second_left' in contract.tuning.score) errs.push('score.per_second_left was removed in v1.2');
   const m = partialMismatch(contract.tuning, STANDARD_TUNING, 'tuning');
   if (m) errs.push(m);
@@ -201,7 +203,7 @@ const record = (name, req, ok, detail, extra = {}) => {
 const staticErrs = staticSimScan();
 record('static-sim-purity', 'Architect §7: src/sim has no three/DOM/Node/Math.random/clock', staticErrs.length === 0, staticErrs.join('\n') || 'clean');
 const tuningErrs = tuningChecks();
-record('contract-file', 'v1.2 (PRD v3 §6): game.contract.json has version 1.2 and the standard tuning', tuningErrs.length === 0, tuningErrs.join('\n') || 'complete');
+record('contract-file', 'v1.3 (PRD v4 §6): game.contract.json has version 1.3, bench_cmd, soak_cmd and the standard tuning (v1.2 numbers)', tuningErrs.length === 0, tuningErrs.join('\n') || 'complete');
 
 for (const c of cases.filter((x) => !ONLY || x.name === ONLY)) {
   const fileA = join(OUT, `${c.name}.jsonl`);

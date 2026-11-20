@@ -3,3 +3,5 @@ dist/
 *.jsonl
 !docs/evidence/**/*.jsonl
 .env
+data/
+release/

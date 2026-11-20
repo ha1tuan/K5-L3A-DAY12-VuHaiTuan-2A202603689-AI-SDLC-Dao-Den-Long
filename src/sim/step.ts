@@ -2,7 +2,7 @@ import { movePlayer } from './systems/player';
 import { pickUp } from './systems/pickup';
 import { interactWithLantern, updateSafeZones } from './systems/lanterns';
 import { pulse } from './systems/pulse';
-import { moveCreatures } from './systems/shades';
+import { moveCreatures, wanderOnly } from './systems/shades';
 import { resolveContacts } from './systems/contacts';
 import { tickTimers } from './systems/timers';
 import { burnFuel } from './systems/fuel';
@@ -68,4 +68,22 @@ export function stepState(s: SimState, ctrl: ControlState, deps: StepDeps): SimE
   spawnArrivals(s, ctx); // 10
   checkEnd(s, ctx); // 11
   return events; // 12. snapshots are written by the caller
+}
+
+/**
+ * PRD v4 §1.2 benchmark scene: input, spawning, damage, pickup, fuel burn and the end of the night are off.
+ * Only the shades move, by the normal wander rule. The clock stands still.
+ */
+export function stepBench(s: SimState, deps: StepDeps): SimEvent[] {
+  const events: SimEvent[] = [];
+  s.tick += 1;
+  s.simTick += 1;
+  if (!deps.memory.started) {
+    deps.memory.started = true;
+    events.push({ tick: 0, name: 'night_start', data: { night: s.night } });
+  }
+  const idle: ControlState = { move: [0, 0], camYawDeg: 0, jump: false, interact: false, pulse: false };
+  const edges = { jump: false, interact: false, pulse: false, dash: false, pause: false };
+  wanderOnly(s, { ...deps, ctrl: idle, edges, emit: () => {} });
+  return events;
 }
