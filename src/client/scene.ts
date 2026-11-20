@@ -489,18 +489,39 @@ export class WorldView {
     return v;
   }
 
+  /**
+   * Geometry and materials shared by every shade (PRD v4 bench: 200 shades). One body material per look
+   * (idle, chasing or draining, stunned) instead of one per shade keeps state changes and memory down.
+   */
+  private shadeKitCache: ReturnType<WorldView['makeShadeKit']> | null = null;
+  private makeShadeKit() {
+    const body = (color: number, emissiveIntensity: number) =>
+      new THREE.MeshStandardMaterial({ color, emissive: this.colors.shadeRim, emissiveIntensity, roughness: 0.4 });
+    return {
+      bodyGeo: new THREE.SphereGeometry(0.75, 18, 14),
+      rimGeo: new THREE.SphereGeometry(0.82, 18, 14),
+      eyeGeo: new THREE.SphereGeometry(0.09, 8, 6),
+      idle: body(C.shadeBody, 0.3),
+      active: body(C.shadeBody, 0.6),
+      stunned: body(C.shadeStunned, 0.05),
+      rim: new THREE.MeshBasicMaterial({ color: this.colors.shadeRim, side: THREE.BackSide, transparent: true, opacity: 0.55 }),
+      eye: new THREE.MeshBasicMaterial({ color: this.colors.shadeEye }),
+    };
+  }
+  private get shadeKit() {
+    return (this.shadeKitCache ??= this.makeShadeKit());
+  }
+
   private shadeView(id: string): ShadeView {
     let v = this.shades.get(id);
     if (v) return v;
+    const kit = this.shadeKit;
     const group = new THREE.Group();
-    const body = new THREE.Mesh(
-      new THREE.SphereGeometry(0.75, 18, 14),
-      new THREE.MeshStandardMaterial({ color: C.shadeBody, emissive: this.colors.shadeRim, emissiveIntensity: 0.35, roughness: 0.4 }),
-    );
-    const rim = new THREE.Mesh(new THREE.SphereGeometry(0.82, 18, 14), new THREE.MeshBasicMaterial({ color: this.colors.shadeRim, side: THREE.BackSide, transparent: true, opacity: 0.55 }));
-    const eyeMat = new THREE.MeshBasicMaterial({ color: this.colors.shadeEye });
+    const body = new THREE.Mesh(kit.bodyGeo, kit.idle);
+    const rim = new THREE.Mesh(kit.rimGeo, kit.rim);
+    const eyeMat = kit.eye;
     for (const x of [-0.22, 0.22]) {
-      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), eyeMat);
+      const eye = new THREE.Mesh(kit.eyeGeo, eyeMat);
       eye.position.set(x, 0.15, 0.66);
       body.add(eye);
     }
@@ -586,11 +607,12 @@ export class WorldView {
   /** PRD v3 §5.6: switch the shades between the standard and the accessible palette. */
   setColorScheme(colors: ColorScheme): void {
     this.colors = colors;
+    const kit = this.shadeKit;
+    kit.rim.color.setHex(colors.shadeRim);
+    kit.eye.color.setHex(colors.shadeEye);
+    for (const m of [kit.idle, kit.active, kit.stunned]) m.emissive.setHex(colors.shadeRim);
     for (const sv of this.shades.values()) {
-      sv.rim.material.color.setHex(colors.shadeRim);
-      sv.eyes.color.setHex(colors.shadeEye);
       sv.beam.material.color.setHex(colors.shadeRim);
-      sv.body.material.emissive.setHex(colors.shadeRim);
     }
   }
 
@@ -700,8 +722,8 @@ export class WorldView {
       sv.group.lookAt(p[0], sh.pos[1], p[2]);
       const grow = sh.state === 'spawning' ? 1 - sh.stateTicks / 60 : 1;
       sv.group.scale.set(grow * (1 + wob * 0.4), grow * (1.15 - wob * 0.4), grow);
-      sv.body.material.color.setHex(sh.state === 'stunned' ? C.shadeStunned : C.shadeBody);
-      sv.body.material.emissiveIntensity = sh.state === 'stunned' ? 0.05 : sh.state === 'chase' || sh.state === 'drain' ? 0.6 : 0.3;
+      const kit = this.shadeKit;
+      sv.body.material = sh.state === 'stunned' ? kit.stunned : sh.state === 'chase' || sh.state === 'drain' ? kit.active : kit.idle;
       // Draining: a pulsing beam from the shade up to the lantern's paper shell.
       const target = sh.state === 'drain' ? s.lanterns.find((l) => l.id === sh.targetLanternId) : undefined;
       sv.beam.visible = !!target;
