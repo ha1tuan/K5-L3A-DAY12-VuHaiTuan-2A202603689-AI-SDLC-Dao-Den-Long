@@ -30,8 +30,29 @@ PRD-0 cố ý mơ hồ; dưới đây là cách hiểu đã chọn. Test và b�
 | M0–M5 | Lõi sim + headless theo TDD (72 test qua `createSim`/`runHeadless`) | Claude Code | Test nhảy viết sai (nhấn lại khi nút còn giữ), đã sửa test; sim đúng | |
 | M7 | Client Three.js + frontend-design | Claude Code + Chrome | Cảnh quá tối, camera quá gần, nút đổi phím mất chữ khi hover: phát hiện qua ảnh chụp, đã sửa. Tab Chrome tự động bị hãm 1.5 FPS (đo trên trang trắng), nên chưa chơi trọn ván trên UI | |
 | M6 | `scripts/verify.mjs` (25 kiểm tra), hook test-after-edit, skill verify-phase | Claude Code | 25/25 xanh ngay lần đầu, nên đã thử đột biến (sai kỳ vọng; `lantern_cost` 8 → 9): verify bắt được cả hai. Lệnh khôi phục sau đột biến hỏng giữa chừng (`git checkout` gặp file chưa track), phát hiện nhờ verify ra 22/25, đã khôi phục | |
+| M8 | README game, CREDITS, bảng bằng chứng, clone sạch, tag | Claude Code | Tự thêm dấu cho tên tác giả (đoán "Vũ Hải Tuấn" từ `VuHaiTuan`), đã sửa về đúng cách viết trong repo. Lặp lại lỗi `pkill -f` tự kết liễu shell khi dừng server (lần 2), đã chuyển sang dừng theo PID | |
 | Chuẩn bị | Cấu hình skills (issue tracker, labels, domain docs); grilling PRD để chốt giả định; viết CLAUDE.md, PLAN, GLOSSARY, ADR-0001 | Claude Code | | |
 
 ### Retro
 
-_(Điền cuối phase: cái gì đạt, cái gì chưa, AI sai ở đâu, harness cần chỉnh gì.)_
+**Đạt:**
+- Toàn bộ checklist PRD-0 và Test Contract v1.0 có bằng chứng tự động: 72 test Vitest, 25/25 kiểm tra verify trên binary thật, chạy lại được từ một bản clone sạch.
+- Đã thử đột biến để chắc bộ kiểm chứng biết báo đỏ.
+
+**Chưa đạt / còn thiếu:**
+- Chưa có bằng chứng chơi tay trọn ván trên giao diện (tới màn thắng/thua rồi chơi lại). Tab trình duyệt tự động bị hãm 1.5 FPS. Cần một lần chơi tay và chụp ảnh trên máy thật.
+- Chưa có số đo token và chi phí: cần lấy từ `/cost` của Claude Code hoặc trang usage, rồi điền vào nhật ký. Không ghi số ước đoán.
+
+**AI sai ở đâu:**
+- Viết test sai một lần (nhảy).
+- Đặt kỳ vọng sát ranh giới bán kính, dễ lệch vì sai số dấu phẩy động (đã dời case `pickup`).
+- Đoán dấu tên tác giả.
+- Hai lần dùng `pkill -f` làm chết chính shell.
+- Lệnh khôi phục sau thử đột biến hỏng giữa chừng.
+- Mọi lỗi đều được phát hiện nhờ chạy thật và đọc output, không nhờ lời agent tự báo.
+
+**Harness cần chỉnh:**
+- Thêm vào CLAUDE.md quy tắc dừng server theo PID, không dùng `pkill -f`.
+- Cân nhắc thêm một Stop hook chạy `npm run verify` trước khi kết thúc lượt, nếu verify đủ nhanh (hiện khoảng 3 s sau build).
+
+**Thứ tự đã làm:** grilling PRD (17 câu, A1–A14) → kiến trúc → spec (issue #1) → TDD sim/headless → client → harness verify → nộp. Các phase sau giữ nguyên vòng này.

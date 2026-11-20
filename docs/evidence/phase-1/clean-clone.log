@@ -1,0 +1,17 @@
+# Clean clone check — 2026-11-20T08:27Z, Linux x86_64, Node v22.22.1
+$ git clone --branch feat/phase-1-night-1 <repo> && cd <repo>
+5ecea1a docs: game README, CREDITS, Phase 1 evidence table; lab README moved to LAB.md
+$ npm ci && npm run build
+added 51 packages in 2s
+> vite build && esbuild src/headless/main.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js
+✓ built in 364ms
+  dist/headless.js  19.9kb
+exit=0
+$ npm start  (background, then fetch the page)
+<title>Đảo Đèn Lồng</title>
+(preview server stopped)
+$ npm test
+ Test Files  12 passed (12)
+      Tests  72 passed (72)
+$ npm run verify
+25/25 passed → docs/evidence/phase-1/verify-report.md

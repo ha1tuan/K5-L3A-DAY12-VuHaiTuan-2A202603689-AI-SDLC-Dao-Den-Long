@@ -37,6 +37,7 @@ Phụ thuộc một chiều: `headless` → `sim` ← `client`. Hai adapter khô
 - Điều khiển (click-to-move, camera kiểu MOBA, phím QWER) chỉ sống ở `src/client/`; sim chỉ biết `move [x,z]`, `cam_yaw_deg`, các nút.
 - Làm lõi theo Test Contract trước, rồi mới đến đồ họa, cài đặt phím hay phần sáng tạo.
 - Commit nhỏ, mỗi commit một việc; không commit `.env` hay key.
+- Dừng server nền theo PID (`kill <pid>`), **không** dùng `pkill -f <chuỗi>`: chuỗi đó khớp luôn dòng lệnh của chính shell và làm shell chết giữa chừng.
 
 ## Agent skills
 
