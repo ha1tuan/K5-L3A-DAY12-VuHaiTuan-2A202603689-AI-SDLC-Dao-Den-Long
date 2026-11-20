@@ -1,0 +1,17 @@
+title: min font 18px at "Đêm 1 · Đảo Bến"
+intro: min font 18px at "Đêm 1 · Đảo Bến"
+playing: min font 18px at "Đêm 1 · Đảo Bến"
+subtitles: ["2 Bóng Mực xuất hiện"] shade arrows on screen edge: 2
+settings: min font 18px at "Đêm 1 · Đảo Bến"
+settings with large text: min font 22.5px at "Đêm 1 · Đảo Bến"
+reduce-motion class on body: true
+rebinding Đi lên to Q: Q đang dùng cho “Nhảy”. Đổi phím đó trước.
+after reset: Đã khôi phục phím mặc định.
+ending: save form visible true min font 18px at "Đêm 1 · Đảo Bến"
+save "ab": Tên cần 3–12 ký tự: chữ, số hoặc _.
+save "Mây_đêm": Đã lưu: hạng 1 trên Bảng xếp hạng.
+POST tuan_2 820 2026-11-20T09:00:00+07:00 → 200
+POST Ông_Đăng 820 2026-11-20T10:00:00+07:00 → 200
+POST top_one 1500 2026-11-20T11:00:00+07:00 → 200
+leaderboard order: ["top_one","tuan_2","Ông_Đăng","Mây_đêm"] min font 18px at "Đêm 1 · Đảo Bến"
+bench scene: running (screenshot during warm-up)
