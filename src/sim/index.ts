@@ -2,7 +2,8 @@ import { CONTRACT_TUNING } from './tuning';
 import { buildInitialState } from './scenario';
 import { createRng } from './rng';
 import { nightDef } from './nights';
-import { stepState } from './step';
+import { stepBench, stepState } from './step';
+import { buildBenchState } from './bench';
 import type { StepMemory } from './systems/context';
 import type { ControlState, Sim, SimConfig, SimEvent } from './types';
 
@@ -13,7 +14,7 @@ export function createSim(cfg: SimConfig): Sim {
   const def = nightDef(cfg.night, tuning);
   const rng = createRng(cfg.seed);
   const sc = cfg.scenario ?? {};
-  const { state, ids } = buildInitialState(def, tuning, rng, sc);
+  const { state, ids } = cfg.bench ? buildBenchState(def, tuning, rng) : buildInitialState(def, tuning, rng, sc);
   const memory: StepMemory = {
     prev: null,
     ids,
@@ -33,12 +34,15 @@ export function createSim(cfg: SimConfig): Sim {
     },
     step(ctrl: ControlState): SimEvent[] {
       if (state.status !== 'playing') return [];
+      if (cfg.bench) return stepBench(state, { tuning, def, rng, memory });
       return stepState(state, ctrl, { tuning, def, rng, memory });
     },
   };
 }
 
 /** Read-only constants and map data the client needs for display (not gameplay inputs). */
+/** Seeded PRNG (mulberry32), for adapters that need reproducible input such as the soak test. */
+export { createRng } from './rng';
 export { CONTRACT_TUNING, fuelUnits, isFullFuel, isLowFuel, secondsToTicks, TICKS_PER_SECOND } from './tuning';
 export { nightDef, type NightDef, type BouncePad } from './nights';
 export type { Column } from './terrain';

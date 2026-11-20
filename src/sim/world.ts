@@ -69,3 +69,10 @@ export const WIND_EVERY_TICKS = 1800;
 export const WIND_GUST_TICKS = 300;
 export const WIND_WARN_TICKS = 120;
 export const WIND_SPEED = 2;
+
+// PRD v4 §1.2: the benchmark scene (same for every entry, seed 42 in practice).
+export const BENCH_SHADES = 200;
+export const BENCH_MOTES = 100;
+export const BENCH_LIT_LANTERNS = 3;
+/** Shades and motes are scattered uniformly over this disc of Night 1's island (kept off its edge). */
+export const BENCH_SCATTER_RADIUS = 38;

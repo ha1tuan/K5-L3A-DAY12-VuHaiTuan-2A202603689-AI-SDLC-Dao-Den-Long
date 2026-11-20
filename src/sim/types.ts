@@ -217,6 +217,8 @@ export interface SimConfig {
   night: NightId;
   scenario?: Scenario;
   tuning?: Tuning;
+  /** PRD v4 §1.2 benchmark scene (Night 1 only); ignores `scenario`. Never used by headless or gameplay. */
+  bench?: boolean;
 }
 
 export interface Sim {

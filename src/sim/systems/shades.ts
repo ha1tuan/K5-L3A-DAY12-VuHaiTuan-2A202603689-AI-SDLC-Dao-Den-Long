@@ -170,3 +170,13 @@ export function moveCreatures(s: SimState, ctx: StepCtx): void {
   }
   for (const dr of s.drifters) moveDrifter(s, ctx, dr);
 }
+
+/** PRD v4 §1.2 bench scene: every shade only wanders (no chase, no drain), still kept out of safe zones. */
+export function wanderOnly(s: SimState, ctx: StepCtx): void {
+  const t = ctx.tuning;
+  for (const sh of s.shades) {
+    wander(ctx, sh, ctx.def.shadeSpeed * WANDER_SPEED_RATIO);
+    for (const l of s.lanterns) if (hasSafeZone(l, t)) pushOutOf(sh.pos, l.pos, t.safe_radius);
+    settleY(ctx, sh.pos);
+  }
+}
