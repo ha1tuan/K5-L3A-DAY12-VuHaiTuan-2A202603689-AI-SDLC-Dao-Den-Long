@@ -30,7 +30,7 @@ function str(v: unknown, where: string): string | undefined {
   if (v === undefined) return undefined;
   return typeof v === 'string' ? v : fail(`${where} must be a string`);
 }
-const SHADE_STATES: readonly ShadeMode[] = ['spawning', 'wander', 'chase', 'recoil', 'stunned'];
+const SHADE_STATES: readonly ShadeMode[] = ['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'];
 const DRIFTER_STATES: readonly Exclude<DrifterMode, 'removed'>[] = ['idle', 'chase', 'flee'];
 
 function vec3(v: unknown, where: string): Vec3 {
@@ -95,6 +95,7 @@ export function parseScenario(json: unknown): Scenario {
       const shade: NonNullable<Scenario['shades']>[number] = { id: str(s.id, `shades[${i}].id`), pos: vec3(s.pos, `shades[${i}].pos`) };
       if (s.state !== undefined) shade.state = oneOf(s.state, `shades[${i}].state`, SHADE_STATES);
       if (s.state_ticks_left !== undefined) shade.state_ticks_left = int(s.state_ticks_left, `shades[${i}].state_ticks_left`);
+      if (s.target_lantern_id !== undefined) shade.target_lantern_id = str(s.target_lantern_id, `shades[${i}].target_lantern_id`);
       return shade;
     });
   }

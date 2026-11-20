@@ -28,7 +28,7 @@ export function resolveContacts(s: SimState, ctx: StepCtx): void {
     .find(
       (sh) =>
         (sh.state === 'wander' || sh.state === 'chase') &&
-        !safeZoneAt(s, sh.pos, t.safe_radius) &&
+        !safeZoneAt(s, t, sh.pos) &&
         distXZ(sh.pos, p.pos) <= t.shade_hit_radius &&
         Math.abs(sh.pos[1] - p.pos[1]) <= HIT_HEIGHT,
     );

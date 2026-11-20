@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runHeadless } from '../../src/headless/run';
 import { InputTimeline } from '../../src/headless/timeline';
+import { ContractFormatError } from '../../src/headless/parse';
 
 const quiet = { random_motes: false, random_shades: false, random_drifters: false, wind_enabled: false } as const;
 const parse = (lines: string[]) => lines.map((l) => JSON.parse(l));
@@ -86,6 +87,34 @@ describe('runHeadless JSONL output', () => {
       }),
     );
     expect(out.find((o) => o.name === 'refuel')).toEqual({ type: 'event', tick: 1, name: 'refuel', data: { lantern_id: 'L1', amount: 4, fuel: 77.5 } });
+  });
+
+  it('writes fuel_drain.fuel with one decimal and the drain state in snapshots', () => {
+    const out = parse(
+      runHeadless({
+        seed: 1,
+        night: 1,
+        scenario: { ...quiet, lanterns: [{ id: 'L1', lit: true, fuel: 25 }], shades: [{ id: 'S1', pos: [0, 1, 23.5], state: 'drain', target_lantern_id: 'L1' }] },
+        timeline: new InputTimeline([]),
+        ticks: 60,
+        snapshotEvery: 60,
+      }),
+    );
+    expect(out.find((o) => o.name === 'fuel_drain')).toEqual({ type: 'event', tick: 60, name: 'fuel_drain', data: { lantern_id: 'L1', shade_id: 'S1', fuel: 19 } });
+    expect(out.find((o) => o.type === 'snapshot' && o.tick === 60).shades[0].state).toBe('drain');
+  });
+
+  it('A42: a target_lantern_id that is not a lantern of the night is a format error (exit 2)', () => {
+    const cfg = (id: string) => ({
+      seed: 1,
+      night: 1 as const,
+      scenario: { ...quiet, shades: [{ pos: [0, 1, 0] as [number, number, number], state: 'drain' as const, target_lantern_id: id }] },
+      timeline: new InputTimeline([]),
+      ticks: 1,
+      snapshotEvery: 10,
+    });
+    expect(() => runHeadless(cfg('L6'))).toThrow(ContractFormatError);
+    expect(() => runHeadless(cfg('L5'))).not.toThrow();
   });
 
   it('reports drifters, charms and cooldowns in seconds (Night 2)', () => {

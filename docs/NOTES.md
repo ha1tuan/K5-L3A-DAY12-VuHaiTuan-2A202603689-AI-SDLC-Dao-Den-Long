@@ -102,7 +102,7 @@ Nguồn: `PRD_v3.md` (Ticket-03 "Đèn cạn dầu", Test Contract v1.2). Luật
 |---|---|---|
 | A32 | Quy trình | Như Phase 2: nhánh `feat/phase-3`, tài liệu → spec → TDD lõi sim/headless → verify → client → PR → tag `phase-3`. Lõi theo contract trước |
 | A33 | Thứ tự tick | Theo `docs/adr/0003-lantern-fuel-and-dawn-win.md`, thay A15. Bước 2b trừ dầu ngay sau bộ đếm (Bóng `drain` lấy trạng thái cuối tick trước), đèn `fuel ≤ 0` tắt ngay ở đó; kết thúc xét `no_flames` → bình minh (`dawn_survived` / `dawn`); bỏ `all_lit` |
-| A34 | Đơn vị dầu (§11 câu 3) | Lưu `fuel_ticks` số nguyên, tối đa 6000; xuất `round(fuel_ticks / 6) / 10` (làm tròn thường). Scenario `fuel` thực → `ceil(fuel × 60)`, kẹp [1, 6000] (0.01 → 1 nên AC-06 tắt sau 1 tick). Đèn yếu: `fuel_ticks < 1800` |
+| A34 | Đơn vị dầu (§11 câu 3) | Lưu `fuel_ticks` số nguyên, tối đa 6000; xuất `round(fuel_ticks / 6) / 10` (làm tròn thường). Scenario `fuel` thực → `ceil(fuel × 60)`, kẹp [1, 6000] (0.01 → 1 nên AC-06 tắt sau 1 tick). Đèn yếu: xem A49 |
 | A35 | `wander` khi không có đèn yếu | PRD viết "đi về đèn tắt gần nhất như trước", nhưng Phase 2 (A22) chưa bao giờ có hành vi đó. Giữ A22 (điểm ngẫu nhiên trong 8 m). Có đèn yếu thì đi thẳng tới đèn đó với tốc độ `wander` (50% `shade_speed`) |
 | A36 | Đổi mục tiêu (§11 câu 5) | Bóng `wander` chọn lại đèn yếu gần nhất mỗi tick (bằng nhau → id nhỏ); hết đèn yếu thì về đi ngẫu nhiên. Bóng `chase` không đổi mục tiêu |
 | A37 | Nhịp `fuel_drain` (§11 câu 2) | Bộ đếm riêng từng Bóng, tính từ lúc vào `drain`; phát ở tick hút thứ 60, 120, …; `fuel` trong payload là dầu sau khi trừ ở tick đó. Rời `drain` thì bộ đếm về 0 |
@@ -117,6 +117,7 @@ Nguồn: `PRD_v3.md` (Ticket-03 "Đèn cạn dầu", Test Contract v1.2). Luật
 | A46 | Thưởng bình minh `floor(fuel)` | Tính từ dầu chính xác: `floor(fuel_ticks / 60)` bằng số nguyên trong sim, không dùng giá trị đã làm tròn để xuất (5999 → 99, không phải 100) |
 | A47 | Bước tăng sức chứa | Số gốc lấy từ `carry_capacity` (10), trần từ `capacity_max` (20). Bước `+2` mỗi lần thắp là hằng số thế giới `CAPACITY_PER_LIGHT` trong `world.ts`, không thêm khoá lạ vào `tuning` của contract |
 | A48 | Đèn đầy dầu (AC-05) | Dầu trừ ở bước 2b trước bước tương tác, nên đèn `fuel = 100` lúc nhấn đã còn 5999. Đèn coi là **đầy** khi `fuel` xuất ra là 100.0, tức `fuel_ticks ≥ 5997`; đèn đầy không nhận được. Ngoài ra `used` vẫn tính `ceil` trên số chính xác (AC-04 vẫn ra 1) |
+| A49 | Đèn yếu (AC-08) | Cùng lý do với A48: đèn `fuel = 30` đã còn 1799 khi Bóng Mực xét ở bước 8. Mọi so sánh ngưỡng dầu (đầy, yếu, châm lên ≥ 30) dùng giá trị `fuel` xuất ra một chữ số thập phân. Đèn **yếu** khi `fuel` xuất ra < 30.0, tức `fuel_ticks ≤ 1796`. Thay mốc `< 1800` ở A34 và ADR-0003 |
 
 ### Nhật ký dùng AI
 

@@ -58,7 +58,7 @@ export interface Tuning {
 
 export type GameStatus = 'playing' | 'won' | 'lost';
 export type EndReason = 'all_lit' | 'dawn' | 'no_flames';
-export type ShadeMode = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+export type ShadeMode = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned' | 'drain';
 export type DrifterMode = 'idle' | 'chase' | 'flee' | 'removed';
 export type MoteKind = 'random' | 'dropped';
 
@@ -79,7 +79,7 @@ export interface Scenario {
   random_drifters?: boolean;
   wind_enabled?: boolean;
   motes?: Vec3[];
-  shades?: { id?: string; pos: Vec3; state?: ShadeMode; state_ticks_left?: number }[];
+  shades?: { id?: string; pos: Vec3; state?: ShadeMode; state_ticks_left?: number; target_lantern_id?: string }[];
   drifters?: { id?: string; pos: Vec3; state?: Exclude<DrifterMode, 'removed'>; stolen?: number }[];
   charms?: { id: string; pos?: Vec3; available?: boolean; respawn_ticks?: number }[];
   lanterns?: { id: string; pos?: Vec3; deposited?: number; lit?: boolean; fuel?: number; ever_lit?: boolean }[];
@@ -134,6 +134,10 @@ export interface Shade {
   pushDir: [number, number];
   wanderTarget: Vec3 | null;
   wanderTicks: number;
+  /** Weak lantern a wandering shade heads for, or the one it drains. */
+  targetLanternId: string | null;
+  /** Ticks drained since entering drain (fuel_drain every 60). */
+  drainTicks: number;
 }
 
 export interface Mote {
@@ -196,6 +200,7 @@ export type SimEvent =
   | Ev<'lantern_lit', { lantern_id: string; relight: boolean }>
   | Ev<'lantern_out', { lantern_id: string }>
   | Ev<'refuel', { lantern_id: string; amount: number; fuel: number }>
+  | Ev<'fuel_drain', { lantern_id: string; shade_id: string; fuel: number }>
   | Ev<'pulse', { stunned_ids: string[] }>
   | Ev<'player_hit', { by: 'shade'; flames: number; dropped: number } | { by: 'fall'; flames: number; dropped: number; lost: number }>
   | Ev<'shade_spawned', { id: string }>

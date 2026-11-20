@@ -42,6 +42,12 @@ export const SAFE_PUSH_PER_TICK = 0.2;
 
 /** A47 / PRD v3 §5.4: carry capacity grows by this much per successful lighting. */
 export const CAPACITY_PER_LIGHT = 2;
+/** PRD v3 §5.2: a shade drains its weak lantern from within this XZ distance. */
+export const DRAIN_RANGE = 2;
+/** PRD v3 §5.2: a draining shade turns on Mây within this XZ distance. */
+export const DRAIN_CHASE_RADIUS = 6;
+/** PRD v3 §6: fuel_drain is written every this many drained ticks. */
+export const FUEL_DRAIN_EVERY_TICKS = 60;
 
 export const CHARM_TICKS = 600;
 export const CHARM_SPEED = 7.2;

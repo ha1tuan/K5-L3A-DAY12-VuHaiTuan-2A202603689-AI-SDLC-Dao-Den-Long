@@ -14,8 +14,14 @@ export const secondsToTicks = (s: number): number => Math.round(s * TICKS_PER_SE
 /** Lantern fuel is stored in whole 1/60 units (ADR-0003): converts a fuel amount (or a rate per second, applied per tick) to units. */
 export const fuelUnits = (fuel: number): number => Math.round(fuel * TICKS_PER_SECOND);
 /** A fuel rate per second as whole units per tick: (perS / 60 fuel per tick) × 60 units per fuel. */
-/** A48: a lantern is full when its fuel exported with one decimal reads fuel_max (within half of 0.1 fuel). */
-export const isFullFuel = (units: number, fuelMax: number): boolean => units >= fuelUnits(fuelMax) - TICKS_PER_SECOND / 20;
+/** Fuel as exported, in tenths (one decimal, half up). Threshold checks use it too (A48, A49). */
+export const fuelTenths = (units: number): number => Math.round((units * 10) / TICKS_PER_SECOND);
+
+/** A48: full when the exported fuel reads fuel_max. */
+export const isFullFuel = (units: number, t: Tuning): boolean => fuelTenths(units) >= t.fuel_max * 10;
+
+/** A49: weak (no safe zone, shade target) when the exported fuel reads below low_fuel_threshold. */
+export const isLowFuel = (units: number, t: Tuning): boolean => fuelTenths(units) < t.low_fuel_threshold * 10;
 
 /** PRD v3 §5.4 */
 export const capacityFor = (t: Tuning, successfulLights: number): number =>

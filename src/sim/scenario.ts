@@ -1,5 +1,6 @@
 import { capacityFor, fuelUnits, TICKS_PER_SECOND } from './tuning';
-import { CHARM_RESPAWN_TICKS, DRIFTER_FLEE_TICKS, INITIAL_MOTES } from './world';
+import { CHARM_RESPAWN_TICKS, DRAIN_RANGE, DRIFTER_FLEE_TICKS, INITIAL_MOTES } from './world';
+import { byId, distXZ } from './geometry';
 import { defaultStateTicks, emptyMotePoints, makeDrifter, makeMote, makeShade, nextId } from './systems/spawn';
 import type { IdCounters } from './systems/context';
 import type { NightDef } from './nights';
@@ -51,7 +52,18 @@ export function buildInitialState(def: NightDef, tuning: Tuning, rng: () => numb
   for (const x of sc.shades ?? []) {
     const state = x.state ?? 'chase';
     const id = x.id ?? nextId('S', ids, [...takenShades, ...shades]);
-    shades.push(makeShade(id, x.pos, state, x.state_ticks_left ?? defaultStateTicks(state, tuning)));
+    const sh = makeShade(id, x.pos, state, x.state_ticks_left ?? defaultStateTicks(state, tuning));
+    if (state === 'drain') {
+      // A42: without a target, the nearest lit lantern within DRAIN_RANGE (ties → lower id); none → wander.
+      const target = x.target_lantern_id
+        ? lanterns.find((l) => l.id === x.target_lantern_id)
+        : lanterns
+            .filter((l) => l.lit && distXZ(l.pos, sh.pos) <= DRAIN_RANGE)
+            .sort((a, b) => distXZ(a.pos, sh.pos) - distXZ(b.pos, sh.pos) || byId(a, b))[0];
+      if (target) sh.targetLanternId = target.id;
+      else sh.state = 'wander';
+    } else if (x.target_lantern_id) sh.targetLanternId = x.target_lantern_id;
+    shades.push(sh);
   }
 
   const drifters: Drifter[] = [];

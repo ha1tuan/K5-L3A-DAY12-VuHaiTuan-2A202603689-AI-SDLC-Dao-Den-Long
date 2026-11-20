@@ -15,7 +15,8 @@ PRD v3 (Ticket-03) đổi mô hình đèn và luật thắng: đèn đã sáng c
 ```
 
 - Dầu lưu bằng số nguyên `fuel_ticks` (tối đa 6000 = 100 × 60) để tính tất định; chỉ quy ra `fuel = round(fuel_ticks / 6) / 10` khi xuất. Scenario cho `fuel` số thực thì quy đổi `ceil(fuel × 60)`, kẹp trong [1, 6000].
-- **Đèn yếu**: đèn sáng có `fuel_ticks < 1800` (`fuel < 30`). Đèn yếu mất vùng an toàn và là mục tiêu của Bóng Mực `wander`. `fuel = 30` vẫn là đèn khoẻ.
+- **Đèn yếu**: đèn sáng có `fuel` xuất ra (một chữ số thập phân) dưới 30.0, tức `fuel_ticks ≤ 1796`. Đèn yếu mất vùng an toàn và là mục tiêu của Bóng Mực `wander`. `fuel = 30` vẫn là đèn khoẻ, kể cả sau lần trừ dầu đầu tiên ở bước 2b (NOTES A49).
+- **Đèn đầy**: `fuel` xuất ra là 100.0, tức `fuel_ticks ≥ 5997` (NOTES A48). So sánh ngưỡng dùng cùng cách làm tròn với đầu ra, vì dầu bị trừ ở bước 2b trước khi tương tác và Bóng Mực xét ngưỡng.
 - Đèn đầy dầu không "nhận được" nên bị bỏ qua khi chọn đèn để tương tác.
 
 ## Thứ tự xử lý trong tick

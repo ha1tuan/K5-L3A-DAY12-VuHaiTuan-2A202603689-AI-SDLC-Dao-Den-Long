@@ -1,6 +1,8 @@
 import { dirXZ, distXZ, pushOutOf } from '../geometry';
 import { DT } from '../tuning';
 import {
+  DRAIN_CHASE_RADIUS,
+  DRAIN_RANGE,
   DRIFTER_CHASE_CARRIED,
   DRIFTER_DETECT,
   DRIFTER_FAST_SPEED,
@@ -15,8 +17,9 @@ import {
   WANDER_REPICK_TICKS,
   WANDER_SPEED_RATIO,
 } from '../world';
-import { safeZoneAt } from './lanterns';
-import type { Drifter, Shade, SimState, Vec3 } from '../types';
+import { hasSafeZone, isWeak, safeZoneAt } from './lanterns';
+import { stopDraining } from './fuel';
+import type { Drifter, Lantern, Shade, SimState, Vec3 } from '../types';
 import type { StepCtx } from './context';
 
 /** Moves a hovering creature (A21); returns false when land's edge or an obstacle stops it. */
@@ -54,10 +57,48 @@ function settleY(ctx: StepCtx, pos: Vec3): void {
   if (Number.isFinite(g)) pos[1] = g + SHADE_HOVER_Y;
 }
 
+/**
+ * Nearest weak lantern, the target of a wandering shade (A36: re-chosen every tick).
+ * Lanterns are kept in id order (L1…Ln), so the strict < keeps the lower id on ties.
+ */
+function nearestWeak(s: SimState, ctx: StepCtx, pos: Vec3): Lantern | null {
+  let best: Lantern | null = null;
+  let bestD = Infinity;
+  for (const l of s.lanterns) {
+    if (!isWeak(l, ctx.tuning)) continue;
+    const d = distXZ(pos, l.pos);
+    if (d < bestD) {
+      bestD = d;
+      best = l;
+    }
+  }
+  return best;
+}
+
+/** PRD v3 §5.2: wander → drain once within DRAIN_RANGE of the weak lantern it heads for. */
+function wanderOrSeek(s: SimState, ctx: StepCtx, sh: Shade, speed: number): void {
+  const target = nearestWeak(s, ctx, sh.pos);
+  if (!target) {
+    sh.targetLanternId = null;
+    wander(ctx, sh, speed);
+    return;
+  }
+  if (sh.targetLanternId !== target.id) {
+    sh.wanderTarget = null;
+    sh.wanderTicks = 0;
+  }
+  sh.targetLanternId = target.id;
+  if (distXZ(sh.pos, target.pos) > DRAIN_RANGE) toward(ctx, sh.pos, target.pos, speed * DT);
+  if (distXZ(sh.pos, target.pos) <= DRAIN_RANGE) {
+    sh.state = 'drain';
+    sh.drainTicks = 0;
+  }
+}
+
 function moveShade(s: SimState, ctx: StepCtx, sh: Shade): void {
   const p = s.player;
-  const r = ctx.tuning.safe_radius;
-  if (safeZoneAt(s, sh.pos, r)) return; // being pushed out (step 6)
+  const t = ctx.tuning;
+  if (safeZoneAt(s, t, sh.pos)) return; // being pushed out (step 6)
   const playerHere = p.respawnTicks === 0;
   const d = playerHere ? distXZ(sh.pos, p.pos) : Infinity;
   const speed = ctx.def.shadeSpeed;
@@ -67,7 +108,7 @@ function moveShade(s: SimState, ctx: StepCtx, sh: Shade): void {
       return;
     case 'stunned':
       if (sh.pushTicks > 0) {
-        const step = ctx.tuning.pulse_push_m / PULSE_PUSH_TICKS;
+        const step = t.pulse_push_m / PULSE_PUSH_TICKS;
         sh.pushTicks -= 1;
         if (!hover(ctx, sh.pos, sh.pushDir[0] * step, sh.pushDir[1] * step)) sh.pushTicks = 0;
       }
@@ -78,18 +119,30 @@ function moveShade(s: SimState, ctx: StepCtx, sh: Shade): void {
       hover(ctx, sh.pos, ux * step, uz * step);
       break;
     }
+    case 'drain': {
+      const target = s.lanterns.find((l) => l.id === sh.targetLanternId);
+      if (d <= DRAIN_CHASE_RADIUS) {
+        sh.state = 'chase';
+        sh.targetLanternId = null;
+        sh.drainTicks = 0;
+        toward(ctx, sh.pos, p.pos, speed * DT);
+      } else if (!target || !isWeak(target, t) || distXZ(sh.pos, target.pos) > DRAIN_RANGE) stopDraining(sh);
+      break; // otherwise stands still, draining
+    }
     case 'wander':
     case 'chase':
-      if (sh.state === 'wander' && d <= SHADE_DETECT) sh.state = 'chase';
-      else if (sh.state === 'chase' && d > SHADE_GIVE_UP) {
+      if (sh.state === 'wander' && d <= SHADE_DETECT) {
+        sh.state = 'chase';
+        sh.targetLanternId = null;
+      } else if (sh.state === 'chase' && d > SHADE_GIVE_UP) {
         sh.state = 'wander';
         sh.wanderTarget = null;
       }
       if (sh.state === 'chase') toward(ctx, sh.pos, p.pos, speed * DT);
-      else wander(ctx, sh, speed * WANDER_SPEED_RATIO);
+      else wanderOrSeek(s, ctx, sh, speed * WANDER_SPEED_RATIO);
       break;
   }
-  for (const l of s.lanterns) if (l.lit) pushOutOf(sh.pos, l.pos, r);
+  for (const l of s.lanterns) if (hasSafeZone(l, t)) pushOutOf(sh.pos, l.pos, t.safe_radius);
 }
 
 function moveDrifter(s: SimState, ctx: StepCtx, dr: Drifter): void {

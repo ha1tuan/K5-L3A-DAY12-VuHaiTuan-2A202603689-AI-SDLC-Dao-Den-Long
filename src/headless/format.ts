@@ -52,7 +52,7 @@ export function snapshotLine(s: Readonly<SimState>): string {
 
 /** Events carrying fuel get it with one decimal, like the snapshot. */
 function eventData(e: SimEvent): unknown {
-  if (e.name === 'refuel') return { ...e.data, fuel: fuel1(Math.round(e.data.fuel * TICKS_PER_SECOND)) };
+  if (e.name === 'refuel' || e.name === 'fuel_drain') return { ...e.data, fuel: fuel1(Math.round(e.data.fuel * TICKS_PER_SECOND)) };
   return e.data;
 }
 

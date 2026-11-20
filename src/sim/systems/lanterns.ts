@@ -1,11 +1,12 @@
 import { distXZ, dirXZ } from '../geometry';
 import { SAFE_PUSH_PER_TICK } from '../world';
-import { capacityFor, fuelUnits, isFullFuel, TICKS_PER_SECOND } from '../tuning';
-import type { Lantern, SimState, Vec3 } from '../types';
+import { capacityFor, fuelUnits, isFullFuel, isLowFuel, TICKS_PER_SECOND } from '../tuning';
+import { stopDraining } from './fuel';
+import type { Lantern, SimState, Tuning, Vec3 } from '../types';
 import type { StepCtx } from './context';
 
 /** A lantern can take motes when dark, or lit and not full (A48). */
-const receivable = (l: Lantern, fuelMax: number) => !l.lit || !isFullFuel(l.fuelTicks, fuelMax);
+const receivable = (l: Lantern, t: Tuning) => !l.lit || !isFullFuel(l.fuelTicks, t);
 
 /**
  * Step 5 (A40): on an interact edge, act on the nearest receivable lantern within interact_radius (ties → lower id).
@@ -20,7 +21,7 @@ export function interactWithLantern(s: SimState, ctx: StepCtx): void {
   let best = Infinity;
   for (const l of s.lanterns) {
     const d = distXZ(p.pos, l.pos);
-    if (receivable(l, t.fuel_max) && d <= t.interact_radius && d < best) {
+    if (receivable(l, t) && d <= t.interact_radius && d < best) {
       best = d;
       target = l;
     }
@@ -66,17 +67,31 @@ function deposit(s: SimState, ctx: StepCtx, l: Lantern): void {
   ctx.emit({ name: 'lantern_lit', data: { lantern_id: l.id, relight } });
 }
 
-/** The lit lantern whose safe zone strictly contains p, if any. */
-export function safeZoneAt(s: SimState, p: Vec3, r: number): Lantern | null {
-  for (const l of s.lanterns) if (l.lit && distXZ(p, l.pos) < r - 1e-9) return l;
+/** A49: a lit lantern whose fuel reads below low_fuel_threshold. */
+export const isWeak = (l: Lantern, t: Tuning): boolean => l.lit && isLowFuel(l.fuelTicks, t);
+
+/** A lit lantern that is not weak has a safe zone (PRD v3 §5.2). */
+export const hasSafeZone = (l: Lantern, t: Tuning): boolean => l.lit && !isLowFuel(l.fuelTicks, t);
+
+/** The lantern whose safe zone strictly contains p, if any. */
+export function safeZoneAt(s: SimState, t: Tuning, p: Vec3): Lantern | null {
+  for (const l of s.lanterns) if (hasSafeZone(l, t) && distXZ(p, l.pos) < t.safe_radius - 1e-9) return l;
   return null;
 }
 
-/** Step 6 (A23): shades caught inside a lit lantern's zone drift out to its rim, 0.2 m per tick. */
+/**
+ * Step 6 (A23, A38): a shade whose drained lantern is no longer weak wanders off; shades caught inside
+ * a safe zone (just lit, relit, or refuelled to ≥ 30) drift out to its rim, 0.2 m per tick, harmlessly.
+ */
 export function updateSafeZones(s: SimState, ctx: StepCtx): void {
-  const r = ctx.tuning.safe_radius;
+  const t = ctx.tuning;
+  const r = t.safe_radius;
   for (const sh of s.shades) {
-    const l = safeZoneAt(s, sh.pos, r);
+    if (sh.state === 'drain') {
+      const target = s.lanterns.find((l) => l.id === sh.targetLanternId);
+      if (!target || !isWeak(target, t)) stopDraining(sh);
+    }
+    const l = safeZoneAt(s, t, sh.pos);
     if (!l) continue;
     const [dx, dz] = dirXZ(l.pos, sh.pos);
     const step = Math.min(SAFE_PUSH_PER_TICK, r - distXZ(sh.pos, l.pos));

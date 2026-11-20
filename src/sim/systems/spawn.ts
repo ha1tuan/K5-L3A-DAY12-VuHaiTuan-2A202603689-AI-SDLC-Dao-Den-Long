@@ -70,7 +70,7 @@ export function defaultStateTicks(state: ShadeMode, t: Tuning): number {
 }
 
 export function makeShade(id: string, pos: Vec3, state: ShadeMode, stateTicks: number): Shade {
-  return { id, pos: [...pos], state, stateTicks, pushTicks: 0, pushDir: [1, 0], wanderTarget: null, wanderTicks: 0 };
+  return { id, pos: [...pos], state, stateTicks, pushTicks: 0, pushDir: [1, 0], wanderTarget: null, wanderTicks: 0, targetLanternId: null, drainTicks: 0 };
 }
 
 export function makeDrifter(id: string, pos: Vec3): Drifter {
