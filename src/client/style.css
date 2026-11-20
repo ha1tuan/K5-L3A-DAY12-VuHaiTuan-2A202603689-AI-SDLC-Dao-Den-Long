@@ -292,3 +292,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .save-score .save-msg { color: var(--paper-dim); margin: 6px 0 0; }
 dialog { max-height: calc(100vh - 32px); overflow-y: auto; }
+/* Tall screens (ending + save form, large text) scroll instead of clipping their top at 720 px. */
+.screen { overflow-y: auto; align-items: safe end; }
+#ending dl { gap: 2px 28px; margin-bottom: 1em; }
+#ending .story h2 { font-size: clamp(2.2rem, 5vw, 3.4rem); }

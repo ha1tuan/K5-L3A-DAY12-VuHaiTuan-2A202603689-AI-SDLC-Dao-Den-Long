@@ -149,6 +149,7 @@ try {
         os: `${osType()} ${release()} (${platform()}), ${cpus()[0]?.model ?? 'cpu?'} ×${cpus().length}, ${Math.round(totalmem() / 2 ** 30)} GB RAM`,
       };
       writeFileSync(out, JSON.stringify(report, null, 2) + '\n');
+      process.stderr.write(`slowest frames (ms into the measurement → dt): ${st.slowest.map((x) => `${x.at_ms}→${x.dt_ms}`).join(', ')}\n`);
       process.stdout.write(JSON.stringify(report) + '\n');
       break;
     }

@@ -380,6 +380,8 @@ if (devNight === 2 || devNight === 3) {
 }
 // Dev shortcut: ?demo=fuel opens Night 1 mid-way with every Phase 3 lantern look on screen
 // (a low-fuel lantern being drained, a full one, a dark one that burned out, a never-lit one).
+// Dev shortcut: ?demo=end loses Night 1 at dawn after 1 s, to reach the ending screen and its save form.
+if (params.get('demo') === 'end') play(1, { time_left_s: 1, random_shades: false });
 if (params.get('demo') === 'fuel') {
   play(1, {
     time_left_s: 95,
@@ -406,6 +408,7 @@ function runBench(seed: number, durationS: number): void {
   sim = createSim({ seed, night: 1, bench: true });
   const idle = { move: [0, 0] as [number, number], camYawDeg: 0, jump: false, interact: false, pulse: false };
   const dts: number[] = [];
+  const times: number[] = []; // ms into the measurement, for the slowest-frames diagnostic
   let start = -1;
   let prev = 0;
   let simAcc = 0;
@@ -420,7 +423,10 @@ function runBench(seed: number, durationS: number): void {
     const dtMs = now - prev;
     prev = now;
     const t = (now - start) / 1000;
-    if (t > BENCH.warmupS && dtMs > 0) dts.push(dtMs);
+    if (t > BENCH.warmupS && dtMs > 0) {
+      dts.push(dtMs);
+      times.push(Math.round((t - BENCH.warmupS) * 1000));
+    }
     simAcc += Math.min(0.25, dtMs / 1000);
     while (simAcc >= STEP) {
       handleEvents(sim.step(idle), new Set());
@@ -433,7 +439,11 @@ function runBench(seed: number, durationS: number): void {
     hud.update(sim.state, DURATION[1], project);
     renderer.render(world.scene, camera3d);
     if (t >= BENCH.warmupS + durationS) {
-      w.__bench = { ...w.__bench, state: 'done', ...frameStats(dts) };
+      const slowest = dts
+        .map((dt, i) => ({ at_ms: times[i], dt_ms: Math.round(dt * 10) / 10 }))
+        .sort((x, y) => y.dt_ms - x.dt_ms)
+        .slice(0, 12);
+      w.__bench = { ...w.__bench, state: 'done', ...frameStats(dts), slowest };
       return;
     }
     requestAnimationFrame(benchFrame);
