@@ -114,6 +114,8 @@ Nguồn: `PRD_v3.md` (Ticket-03 "Đèn cạn dầu", Test Contract v1.2). Luật
 | A43 | Thuật ngữ | Thêm Dầu, Châm dầu, Thắp lại, Đèn yếu, Hút dầu, Sức chứa, Sống tới bình minh. Sửa A16: "Bình minh" (`dawn`) vẫn là lý do thua nhưng chỉ khi hết giờ mà số đèn sáng dưới ngưỡng; hết giờ đủ đèn là `dawn_survived` (thắng) |
 | A44 | Bảng màu dễ phân biệt | Chỉ ở client, lưu trong `settingsStore` cùng âm lượng/độ nhạy. Bóng Mực viền và mắt `#00B3FF`; cảnh báo trắng kèm ⚠; đèn tắt xẹp 20% và giấy rách; đèn yếu nhấp nháy 1 Hz ở mọi chế độ. AC-18 kiểm bằng test hàm thuần |
 | A45 | Test cũ, changelog, bằng chứng | Test sim/headless và case verify bị luật mới làm sai (`all_lit`, thời lượng, điểm, thưởng thời gian, sức chứa cố định) được sửa hoặc xoá kèm lý do trong commit và `req`. `CHANGELOG.md` ở gốc. Bằng chứng ở `docs/evidence/phase-3/` |
+| A46 | Thưởng bình minh `floor(fuel)` | Tính từ dầu chính xác: `floor(fuel_ticks / 60)` bằng số nguyên trong sim, không dùng giá trị đã làm tròn để xuất (5999 → 99, không phải 100) |
+| A47 | Bước tăng sức chứa | Số gốc lấy từ `carry_capacity` (10), trần từ `capacity_max` (20). Bước `+2` mỗi lần thắp là hằng số thế giới `CAPACITY_PER_LIGHT` trong `world.ts`, không thêm khoá lạ vào `tuning` của contract |
 
 ### Nhật ký dùng AI
 

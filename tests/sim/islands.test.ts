@@ -5,7 +5,7 @@ import { named, once, quietSim, run } from './helpers';
 const r = (p: number[], cx = 0, cz = 0) => Math.hypot(p[0] - cx, p[2] - cz);
 
 describe('F-04 Đêm 2 và Đêm 3 (AC-04.1, AC-04.2)', () => {
-  it('Night 2 – Đảo Cau: 6 lanterns, 330 s, full flames, 20 motes over both islands, night_start {night: 2}', () => {
+  it('Night 2 – Đảo Cau: 6 lanterns, 270 s (v1.2), full flames, 20 motes over both islands, night_start {night: 2}', () => {
     const sim = createSim({ seed: 2, night: 2 });
     const s = sim.state;
     expect(s.lanterns.map((l) => l.pos)).toEqual([
@@ -16,12 +16,12 @@ describe('F-04 Đêm 2 và Đêm 3 (AC-04.1, AC-04.2)', () => {
       [87, 0, -10],
       [53, 0, -10],
     ]);
-    expect([s.timeLeftS, s.player.flames, s.motes.length]).toEqual([330, 3, 20]);
+    expect([s.timeLeftS, s.player.flames, s.motes.length]).toEqual([270, 3, 20]);
     expect(s.charms.map((c) => [c.id, ...c.pos])).toEqual([['C1', 35, 0, 0]]);
     expect(sim.step({ move: [0, 0], camYawDeg: 0, jump: false, interact: false, pulse: false })[0].data).toEqual({ night: 2 });
   });
 
-  it('Night 3 – Đảo Chuông: 7 lanterns on three tiers, 360 s, motes on tiers at Y 0 / 3 / 6, two charms', () => {
+  it('Night 3 – Đảo Chuông: 7 lanterns on three tiers, 300 s (v1.2), motes on tiers at Y 0 / 3 / 6, two charms', () => {
     const s = createSim({ seed: 2, night: 3 }).state;
     expect(s.lanterns.map((l) => l.pos)).toEqual([
       [0, 6, 6],
@@ -32,7 +32,7 @@ describe('F-04 Đêm 2 và Đêm 3 (AC-04.1, AC-04.2)', () => {
       [20, 0, -35],
       [-20, 0, -35],
     ]);
-    expect([s.timeLeftS, s.player.flames, s.motes.length]).toEqual([360, 3, 20]);
+    expect([s.timeLeftS, s.player.flames, s.motes.length]).toEqual([300, 3, 20]);
     expect(new Set(s.motes.map((m) => m.pos[1])).size).toBeGreaterThan(1);
     expect(s.motes.every((m) => [0, 3, 6].includes(m.pos[1]))).toBe(true);
     expect(s.charms.map((c) => c.id)).toEqual(['C1', 'C2']);

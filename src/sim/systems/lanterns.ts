@@ -1,5 +1,6 @@
 import { distXZ, dirXZ } from '../geometry';
 import { SAFE_PUSH_PER_TICK } from '../world';
+import { fuelUnits } from '../tuning';
 import type { Lantern, SimState, Vec3 } from '../types';
 import type { StepCtx } from './context';
 
@@ -28,8 +29,10 @@ export function interactWithLantern(s: SimState, ctx: StepCtx): void {
   ctx.emit({ name: 'deposit', data: { lantern_id: target.id, amount, deposited: target.deposited } });
   if (target.deposited >= lantern_cost) {
     target.lit = true;
+    target.everLit = true;
+    target.fuelTicks = fuelUnits(ctx.tuning.fuel_max);
     s.score += score.per_lantern;
-    ctx.emit({ name: 'lantern_lit', data: { lantern_id: target.id } });
+    ctx.emit({ name: 'lantern_lit', data: { lantern_id: target.id, relight: false } });
   }
 }
 

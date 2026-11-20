@@ -1,4 +1,4 @@
-// The ONLY place that knows the Test Contract v1.1 JSONL shapes (PRD v2 §6).
+// The ONLY place that knows the Test Contract v1.2 JSONL shapes (PRD v2 §6, PRD v3 §6).
 import { TICKS_PER_SECOND, type SimEvent, type SimState, type Vec3 } from '../sim';
 
 const r3 = (n: number): number => {
@@ -7,6 +7,8 @@ const r3 = (n: number): number => {
 };
 const v3 = (p: Vec3): Vec3 => [r3(p[0]), r3(p[1]), r3(p[2])];
 const secs = (ticks: number) => r3(ticks / TICKS_PER_SECOND);
+/** A34: fuel units (1/60) to fuel with one decimal, rounded half up. */
+const fuel1 = (units: number) => Math.round(units / 6) / 10;
 
 export function snapshotLine(s: Readonly<SimState>): string {
   const p = s.player;
@@ -30,7 +32,15 @@ export function snapshotLine(s: Readonly<SimState>): string {
       pulse_cd_s: secs(p.pulseCooldownTicks),
       charm_s: secs(p.charmTicks),
     },
-    lanterns: s.lanterns.map((l) => ({ id: l.id, pos: v3(l.pos), lit: l.lit, deposited: l.deposited })),
+    lanterns: s.lanterns.map((l) => ({
+      id: l.id,
+      pos: v3(l.pos),
+      lit: l.lit,
+      deposited: l.deposited,
+      fuel: fuel1(l.fuelTicks),
+      ever_lit: l.everLit,
+      relit_count: l.relitCount,
+    })),
     shades: s.shades.map((x) => ({ id: x.id, pos: v3(x.pos), state: x.state })),
     motes_active: s.motes.length,
     motes: s.motes.map((m) => ({ id: m.id, pos: v3(m.pos), kind: m.kind, ttl_s: m.ttlTicks === null ? null : secs(m.ttlTicks) })),

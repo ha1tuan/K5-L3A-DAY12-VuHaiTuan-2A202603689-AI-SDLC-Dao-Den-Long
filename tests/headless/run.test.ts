@@ -36,7 +36,7 @@ describe('runHeadless JSONL output', () => {
       sim_tick: 0,
       state: 'playing',
       night: 1,
-      time_left_s: 300,
+      time_left_s: 240,
       score: 0,
       wind: { active: false, dir_deg: 0 },
       player: {
@@ -51,11 +51,11 @@ describe('runHeadless JSONL output', () => {
         charm_s: 0,
       },
       lanterns: [
-        { id: 'L1', pos: [0, 0, 25], lit: false, deposited: 0 },
-        { id: 'L2', pos: [23.8, 0, 7.7], lit: false, deposited: 0 },
-        { id: 'L3', pos: [14.7, 0, -20.2], lit: false, deposited: 0 },
-        { id: 'L4', pos: [-14.7, 0, -20.2], lit: false, deposited: 0 },
-        { id: 'L5', pos: [-23.8, 0, 7.7], lit: false, deposited: 0 },
+        { id: 'L1', pos: [0, 0, 25], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L2', pos: [23.8, 0, 7.7], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L3', pos: [14.7, 0, -20.2], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L4', pos: [-14.7, 0, -20.2], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
+        { id: 'L5', pos: [-23.8, 0, 7.7], lit: false, deposited: 0, fuel: 0, ever_lit: false, relit_count: 0 },
       ],
       shades: [{ id: 'S1', pos: [10, 1, 0], state: 'chase' }],
       motes_active: 1,
@@ -63,6 +63,14 @@ describe('runHeadless JSONL output', () => {
       drifters: [],
       charms: [],
     });
+  });
+
+  it('A34: writes lantern fuel with one decimal, rounding half up from 1/60 units', () => {
+    const fuelAt = (ticks: number) =>
+      parse(runHeadless({ seed: 1, night: 1, scenario: { ...quiet, lanterns: [{ id: 'L1', lit: true, fuel: 50 }] }, timeline: new InputTimeline([]), ticks, snapshotEvery: 1 }))
+        .filter((o) => o.type === 'snapshot')
+        .at(-1).lanterns[0].fuel;
+    expect([fuelAt(0), fuelAt(3), fuelAt(4), fuelAt(60)]).toEqual([50, 50, 49.9, 49]);
   });
 
   it('reports drifters, charms and cooldowns in seconds (Night 2)', () => {

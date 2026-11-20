@@ -5,6 +5,7 @@ import { pulse } from './systems/pulse';
 import { moveCreatures } from './systems/shades';
 import { resolveContacts } from './systems/contacts';
 import { tickTimers } from './systems/timers';
+import { burnFuel } from './systems/fuel';
 import { spawnArrivals } from './systems/spawn';
 import { checkEnd } from './systems/end';
 import type { StepCtx, StepMemory } from './systems/context';
@@ -22,7 +23,7 @@ export interface StepDeps {
 
 const rising = (now: boolean | undefined, before: boolean | undefined) => !!now && !before;
 
-/** Advances the state by one tick in the fixed order of ADR-0002. */
+/** Advances the state by one tick in the fixed order of ADR-0003. */
 export function stepState(s: SimState, ctrl: ControlState, deps: StepDeps): SimEvent[] {
   const events: SimEvent[] = [];
   const { memory } = deps;
@@ -56,6 +57,7 @@ export function stepState(s: SimState, ctrl: ControlState, deps: StepDeps): SimE
   if (s.paused) return events;
 
   tickTimers(s, ctx); // 2
+  burnFuel(s, ctx); // 2b
   movePlayer(s, ctx); // 3 (+ fall check)
   pickUp(s, ctx); // 4
   interactWithLantern(s, ctx); // 5

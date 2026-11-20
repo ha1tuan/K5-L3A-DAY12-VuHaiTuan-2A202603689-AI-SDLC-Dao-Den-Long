@@ -11,8 +11,7 @@ export function checkEnd(s: SimState, ctx: StepCtx): void {
   if (!reason) return;
   const won = reason === 'all_lit';
   if (won) {
-    const { per_second_left, per_flame_left } = ctx.tuning.score;
-    s.score += per_second_left * Math.floor(Math.max(0, s.timeLeftS) + 1e-9) + per_flame_left * s.player.flames;
+    s.score += ctx.tuning.score.per_flame_left * s.player.flames;
   }
   s.status = won ? 'won' : 'lost';
   s.endReason = reason;

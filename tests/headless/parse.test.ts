@@ -47,6 +47,22 @@ describe('parseScenario', () => {
     expect(sc.motes).toEqual([[0, 0, 5]]);
   });
 
+  it('accepts the v1.2 lantern fields', () => {
+    const sc = parseScenario({ lanterns: [{ id: 'L1', lit: true, fuel: 37.5, ever_lit: true }, { id: 'L2', lit: true }] });
+    expect(sc.lanterns).toEqual([
+      { id: 'L1', pos: undefined, deposited: undefined, lit: true, fuel: 37.5, ever_lit: true },
+      { id: 'L2', pos: undefined, deposited: undefined, lit: true, fuel: undefined, ever_lit: undefined },
+    ]);
+  });
+
+  it.each([
+    ['fuel not a number', { lanterns: [{ id: 'L1', fuel: '50' }] }],
+    ['negative fuel', { lanterns: [{ id: 'L1', fuel: -1 }] }],
+    ['ever_lit not boolean', { lanterns: [{ id: 'L1', ever_lit: 1 }] }],
+  ])('rejects %s', (_label, json) => {
+    expect(() => parseScenario(json)).toThrow(ContractFormatError);
+  });
+
   it('accepts the v1.1 additions', () => {
     const sc = parseScenario({
       player: { invuln_ticks: 10, dash_cd_ticks: 20, pulse_cd_ticks: 30, charm_ticks: 40 },

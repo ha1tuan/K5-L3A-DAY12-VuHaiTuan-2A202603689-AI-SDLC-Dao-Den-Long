@@ -1,3 +1,4 @@
+import { fuelUnits, TICKS_PER_SECOND } from './tuning';
 import { CHARM_RESPAWN_TICKS, DRIFTER_FLEE_TICKS, INITIAL_MOTES } from './world';
 import { defaultStateTicks, emptyMotePoints, makeDrifter, makeMote, makeShade, nextId } from './systems/spawn';
 import type { IdCounters } from './systems/context';
@@ -13,13 +14,25 @@ export interface InitialWorld {
 export function buildInitialState(def: NightDef, tuning: Tuning, rng: () => number, sc: Scenario = {}): InitialWorld {
   const ids: IdCounters = { mote: 0, shade: 0, drifter: 0 };
 
-  const lanterns: Lantern[] = def.lanterns.map((pos, i) => ({ id: `L${i + 1}`, pos: [...pos], lit: false, deposited: 0 }));
+  const lanterns: Lantern[] = def.lanterns.map((pos, i) => ({
+    id: `L${i + 1}`,
+    pos: [...pos],
+    lit: false,
+    deposited: 0,
+    fuelTicks: 0,
+    everLit: false,
+    relitCount: 0,
+  }));
+  const maxUnits = fuelUnits(tuning.fuel_max);
   for (const u of sc.lanterns ?? []) {
     const l = lanterns.find((x) => x.id === u.id);
     if (!l) continue;
     if (u.pos) l.pos = [...u.pos];
     if (u.deposited !== undefined) l.deposited = u.deposited;
     if (u.lit !== undefined) l.lit = u.lit;
+    // A34: a lit lantern without fuel starts full; real fuel rounds up to whole units, kept in [1, max].
+    if (l.lit) l.fuelTicks = u.fuel === undefined ? maxUnits : Math.min(maxUnits, Math.max(1, Math.ceil(u.fuel * TICKS_PER_SECOND - 1e-9)));
+    l.everLit = u.ever_lit ?? l.lit;
   }
 
   const motes: Mote[] = [];

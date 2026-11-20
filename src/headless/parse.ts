@@ -128,6 +128,8 @@ export function parseScenario(json: unknown): Scenario {
         pos: l.pos === undefined ? undefined : vec3(l.pos, `lanterns[${i}].pos`),
         deposited: int(l.deposited, `lanterns[${i}].deposited`),
         lit: bool(l.lit, `lanterns[${i}].lit`),
+        fuel: num(l.fuel, `lanterns[${i}].fuel`, 0),
+        ever_lit: bool(l.ever_lit, `lanterns[${i}].ever_lit`),
       };
     });
   }
