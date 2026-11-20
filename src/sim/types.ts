@@ -57,7 +57,7 @@ export interface Tuning {
 }
 
 export type GameStatus = 'playing' | 'won' | 'lost';
-export type EndReason = 'all_lit' | 'dawn' | 'no_flames';
+export type EndReason = 'dawn_survived' | 'dawn' | 'no_flames';
 export type ShadeMode = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned' | 'drain';
 export type DrifterMode = 'idle' | 'chase' | 'flee' | 'removed';
 export type MoteKind = 'random' | 'dropped';
