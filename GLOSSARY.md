@@ -174,6 +174,14 @@ _Avoid_: tường (không có tường), cliff
 **Tháp chuông**:
 Trụ đá ở giữa tầng 2 của Đảo Chuông; vật cản, không leo được.
 
+**Bảng xếp hạng** (`leaderboard`):
+Danh sách 10 lượt chơi có Tổng điểm game cao nhất, lưu trên máy; mỗi mục gồm tên người chơi, Tổng điểm game, số Đêm đã thắng, thời điểm đạt và seed.
+_Avoid_: high score, bảng điểm (đó là bảng tách điểm ở màn kết Đêm)
+
+**Cảnh benchmark**:
+Cảnh dựng sẵn để đo hiệu năng: Đêm 1, 200 Bóng Mực lang thang, 100 đom đóm, ba đèn sáng; không có sát thương hay kết thúc Đêm.
+_Avoid_: stress test, demo
+
 **Kịch bản** (`scenario`):
 Tình huống dựng sẵn cho chế độ headless, ghi đè trạng thái ban đầu của Đêm.
 _Avoid_: level file, fixture

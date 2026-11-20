@@ -137,16 +137,32 @@ src/client/
   story.ts           lời Ông Đăng trước mỗi Đêm
   input/
     clickToMove.ts   moveToward(pos, target, stop=0.2) → { move, arrived }  (hàm thuần)
-    keybindings.ts   Q/W/E/D/P/R/Space; Esc dành cho tạm dừng; lưu Storage được truyền vào
-    controls.ts      sample(playerPos) → ControlState (camYawDeg luôn = 0)
+    keybindings.ts   ↑↓←→ (Phase 4) + Q/W/E/D/P/R/Space; Esc dành cho tạm dừng; lưu Storage được truyền vào
+    keyMove.ts       keyMove(keys, cameraForward) → hướng đi theo camera (hàm thuần)
+    controls.ts      sample(playerPos, forward) → ControlState (camYawDeg luôn = 0; phím đi đè đích click)
   camera.ts          camera MOBA góc cố định, trượt ở mép, Space về Mây, lăn để zoom; giới hạn theo Đêm, theo độ nhạy
   scene.ts           WorldView: dựng đảo từ nightDef + trang trí (cây, cỏ, đom đóm trang trí); sync(state) mỗi frame
   lighting.ts        bảng màu F-10, ánh sáng môi trường 0.15 + 0.55 × sáng/tổng (hàm thuần)
   hud.ts             DOM overlay F-08: Ngọn Lửa, đồng hồ, dây đèn, điểm, lọ đom đóm, hồi chiêu, nhắc nạp, mũi tên, banner gió
   audio.ts           âm thanh tổng hợp WebAudio
   settings.ts        menu Tạm dừng + Cài đặt (phím, âm lượng, độ nhạy)
-  settingsStore.ts   đọc/ghi cài đặt qua Storage được truyền vào (hàm thuần); Phase 3 thêm Bảng màu dễ phân biệt
+  settingsStore.ts   đọc/ghi cài đặt qua Storage được truyền vào (hàm thuần); Phase 3 thêm Bảng màu dễ phân biệt, Phase 4 thêm Giảm chuyển động, Chữ lớn
+  cues.ts            Phase 4: phụ đề và mũi tên Bóng Mực; cuesFor(state, events, memory) là hàm thuần
+  leaderboardStore.ts Phase 4: bảng xếp hạng qua /api/leaderboard, không có server thì localStorage
+  benchMath.ts       Phase 4: số liệu khung của bench (§1.4) và quỹ đạo camera (hàm thuần); main.ts chạy cảnh ở ?bench=1
 ```
+
+### Phase 4: server và bảng xếp hạng
+
+```
+src/leaderboard/index.ts  luật bảng xếp hạng (tên, top 10, sắp xếp, chuẩn hoá file), thuần, dùng chung client + server
+src/server/serve.ts       → dist/serve.js: phục vụ dist/web, GET/POST /api/leaderboard ghi data/leaderboard.json,
+                          --export-leaderboard <file>; startServer() dùng lại trong scripts/bench.mjs, scripts/ui-check.mjs
+src/headless/soak.ts      → dist/soak.js (qua soakMain.ts): runSoak({seed, nights, rssMb}) thuần, RSS được truyền vào
+scripts/bench.mjs         bench_cmd: server + Chrome qua playwright-core, đo RSS cây tiến trình Chrome
+```
+
+- Cảnh bench sống trong sim (`createSim({bench: true})`, `src/sim/bench.ts`, bước `stepBench`) để vị trí 200 Bóng Mực và 100 đom đóm là tất định theo seed 42 và luật `wander` là luật thật của sim. Headless không bao giờ bật nó.
 
 - **Click-to-move nằm hoàn toàn ở client.** Raycast điểm click vào địa hình thật (bậc, cầu, đảo bên kia), trượt ra ngoài thì lấy mặt phẳng Y = 0 nên Mây có thể chạy quá mép và rơi. Mỗi tick `moveToward` sinh `move` theo hướng thế giới. Sim không biết gì về chuột.
 - `keybindings.ts` và `settingsStore.ts` nhận `Storage` qua tham số. Có hai adapter (`localStorage` thật và `Map` trong bộ nhớ cho test), nên seam này là seam thật. Mọi lần đọc/ghi đều bọc `try/catch`, lỗi thì dùng mặc định.

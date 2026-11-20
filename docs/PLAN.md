@@ -142,7 +142,21 @@ Q nhảy, W nạp, E tỏa sáng, R chơi lại, **D lướt**, **Esc/P tạm d�
 - [x] `CHANGELOG.md` liệt kê đủ breaking changes §10
 - [ ] Tag `phase-3` trên repo public
 
-## Phase 4: khung (ticket chưa phát hành)
+## Phase 4: Bình minh, phát hành v1.0.0 (Test Contract v1.3)
+
+Nguồn `PRD_v4.md`, giả định A50–A60.
+
+- [x] Contract v1.3: `contract_version`, `bench_cmd`, `soak_cmd`
+- [x] Soak: 10 Đêm, `crashes` 0, bộ nhớ ≤ ×1.2 (`docs/evidence/phase-4/soak.json`)
+- [x] Bench: cảnh chuẩn, 1280×720, vsync tắt, thoát mã 0 (`bench.json`)
+- [x] Bảng xếp hạng: top 10, sắp xếp, lưu đĩa, màn hình từ menu, xuất JSON
+- [x] Dễ tiếp cận: đổi phím 4 hướng, báo trùng, khôi phục, phụ đề + mũi tên, giảm chuyển động, chữ ≥ 18 px, ×1.25
+- [x] Đóng gói: README 3 lệnh, CHANGELOG, CREDITS, LICENSE, zip phát hành
+- [x] Retro `docs/RETRO.md`
+- [ ] Video demo (`docs/demo/SCRIPT.md`)
+- [ ] Tag `phase-4`, Release `v1.0.0`
+
+## Vòng làm việc mỗi phase
 
 Mỗi phase lặp lại vòng làm việc sau, khoảng 60 phút:
 

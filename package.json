@@ -7,6 +7,7 @@
     "build": "vite build && esbuild src/headless/main.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/headless.js && esbuild src/headless/soakMain.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/soak.js && esbuild src/server/serve.ts --bundle --platform=node --format=esm --target=node18 --outfile=dist/serve.js",
     "start": "node dist/serve.js --open",
     "bench": "node scripts/bench.mjs",
+    "package": "node scripts/package.mjs",
     "soak": "node --expose-gc --single-threaded --max-semi-space-size=1 dist/soak.js",
     "dev": "vite",
     "test": "vitest run",

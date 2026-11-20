@@ -1,6 +1,6 @@
 # Đảo Đèn Lồng
 
-> Video demo: _(bổ sung ở Phase 4)_
+> **Video demo:** _chưa có. Kịch bản quay ở [docs/demo/SCRIPT.md](docs/demo/SCRIPT.md)._ · **Bản phát hành:** [Release v1.0.0](https://github.com/ha1tuan/K5-L3A-DAY12-VuHaiTuan-2A202603689-AI-SDLC-Dao-Den-Long/releases/tag/v1.0.0)
 
 Game 3D góc nhìn từ trên xuống. Sương đen đã nuốt ánh sáng của ba hòn đảo. Bạn là **Mây**, người giữ đèn nhỏ tuổi đội nón lá treo một chiếc đèn lồng nhỏ. Qua ba Đêm liền, Mây gom đom đóm về thắp lại Đèn Lồng Lớn của từng đảo, rồi giữ cho đèn đủ dầu tới bình minh. Trên đường phải né **Bóng Mực** trôi ra từ sương, giờ còn biết lần tới hút dầu những chiếc đèn sắp cạn, và **Gió Lạc** chuyên giật đom đóm.
 
@@ -8,9 +8,14 @@ Game 3D góc nhìn từ trên xuống. Sương đen đã nuốt ánh sáng của
 
 Bài làm lab *AI SDLC* (Day 12) của 2A202603689-VuHaiTuan. Tài liệu của lab nằm ở [LAB.md](LAB.md).
 
-## Cài đặt và chạy
+## Yêu cầu hệ thống
 
-Cần Node.js 18 trở lên, chạy trên Linux hoặc macOS.
+- Node.js 18 trở lên (đã thử với Node 22), npm.
+- Trình duyệt có WebGL 2: Chrome/Edge 100+, Firefox 100+ hoặc Safari 16+. Card đồ hoạ tích hợp là đủ.
+- Đã thử trên Linux (Ubuntu, Wayland). Lệnh `npm` giống nhau trên macOS và Windows.
+- Riêng benchmark cần Google Chrome hoặc Chromium (hoặc đặt `CHROME_PATH`).
+
+## Cài đặt và chạy (3 lệnh)
 
 ```bash
 git clone https://github.com/ha1tuan/K5-L3A-DAY12-VuHaiTuan-2A202603689-AI-SDLC-Dao-Den-Long.git && cd K5-L3A-DAY12-VuHaiTuan-2A202603689-AI-SDLC-Dao-Den-Long
@@ -18,13 +23,14 @@ npm ci && npm run build
 npm start
 ```
 
-`npm start` mở game ở <http://localhost:4173>. Thêm `?night=2` hoặc `?night=3` vào địa chỉ để vào thẳng Đêm đó, tiện khi thử. `?demo=fuel` mở Đêm 1 giữa chừng với đủ các kiểu đèn: một đèn sắp cạn đang bị Bóng Mực hút, một đèn đầy, một đèn đã tắt.
+`npm start` chạy server của game và mở <http://localhost:4173>. Không cần Vite hay mạng khi chơi (phông Baloo 2 tải từ Google Fonts, không có mạng thì dùng phông hệ thống). Không muốn build? Tải `dao-den-long-v1.0.0.zip` ở Release, giải nén rồi chạy `node dist/serve.js --open`. Thêm `?night=2` hoặc `?night=3` vào địa chỉ để vào thẳng Đêm đó, tiện khi thử. `?demo=fuel` mở Đêm 1 giữa chừng với đủ các kiểu đèn: một đèn sắp cạn đang bị Bóng Mực hút, một đèn đầy, một đèn đã tắt.
 
 ## Điều khiển
 
 | Thao tác | Mặc định |
 |---|---|
 | Đi tới một điểm | Nhấn chuột trái lên mặt đất (bậc, cầu, đảo bên kia đều được) |
+| Đi lên / xuống / trái / phải (theo hướng camera) | ↑ ↓ ← → |
 | Nhảy | Q |
 | Nạp đom đóm vào đèn gần nhất (thắp, thắp lại hoặc châm dầu) | W |
 | Tỏa sáng | E |
@@ -35,7 +41,22 @@ npm start
 | Đưa camera về Mây / giữ để bám theo | Space |
 | Phóng to, thu nhỏ | Lăn chuột |
 
-Trong menu Tạm dừng có thể đổi phím, chỉnh âm lượng và độ nhạy chuột (tốc độ trượt camera và bước zoom), và bật **Bảng màu dễ phân biệt**: Bóng Mực chuyển sang xanh `#00B3FF`, cảnh báo thành chữ trắng kèm ⚠. Mọi thứ được lưu trong trình duyệt. Esc luôn dùng để tạm dừng, không gán lại được.
+Trong menu Tạm dừng có thể đổi phím cho mọi hành động (kể cả 4 hướng đi), chỉnh âm lượng và độ nhạy chuột (tốc độ trượt camera và bước zoom). Gán một phím đã dùng thì game báo phím đó đang thuộc hành động nào. Nút **Khôi phục phím mặc định** đưa mọi phím về như bảng trên. Esc luôn dùng để tạm dừng, không gán lại được. Mọi cài đặt được lưu trong trình duyệt.
+
+### Dễ tiếp cận
+
+- **Bảng màu dễ phân biệt:** Bóng Mực chuyển sang xanh `#00B3FF`, cảnh báo thành chữ trắng kèm ⚠, đèn tắt và đèn sắp cạn nhận ra được bằng hình dạng.
+- **Phụ đề và chỉ báo hình ảnh** cho mọi âm báo: "Bóng Mực xuất hiện" kèm mũi tên đỏ ở mép màn hình chỉ về Bóng Mực ngoài khung nhìn, "Gió mạnh sắp thổi", đếm 10 giây cuối, "Đèn L*k* sắp cạn dầu".
+- **Giảm chuyển động:** tắt mọi nhấp nháy, chớp sáng và vòng loé trên màn hình.
+- **Cỡ chữ:** không chữ nào dưới 18 px ở 1280×720; **Chữ lớn** phóng mọi chữ lên ×1.25.
+
+## Bảng xếp hạng
+
+Sau Màn Bình Minh, hoặc khi thua ở bất kỳ Đêm nào, game mời nhập tên (3–12 ký tự: chữ, kể cả tiếng Việt có dấu, số hoặc `_`) để lưu Tổng điểm game của chuỗi. Bảng giữ 10 người cao điểm nhất; bằng điểm thì ai đạt trước đứng trên. Bảng lưu ở `data/leaderboard.json` nên vẫn còn sau khi tắt và mở lại game. Xem từ nút **Bảng xếp hạng** ở menu chính, hoặc xuất ra JSON:
+
+```bash
+npm start -- --export-leaderboard out.json     # {"entries": [{name, score, nights_won, achieved_at, seed}, ...]}
+```
 
 ## Ba Đêm
 
@@ -78,7 +99,7 @@ Nhặt đom đóm không có điểm; điểm tính lúc nạp. Không còn thư
 
 **Ví dụ:** Đêm 2, bình minh đến khi 4 trên 6 đèn còn sáng, mỗi đèn còn 99.95 dầu, Mây còn 3 Ngọn Lửa. Thưởng bình minh là 4 × (50 + 99) + 3 × 50 = **746**. Đây đúng là case `p3_ac13_dawn_win` trong bộ kiểm chứng.
 
-## Chế độ headless (Test Contract v1.2)
+## Chế độ headless (Test Contract v1.3)
 
 Mọi số tuning khai trong [`game.contract.json`](game.contract.json) cũng chính là số game đang dùng, vì sim đọc trực tiếp file này. Đây đúng bộ số chuẩn của PRD v2 §6.1, cộng các khoá dầu đèn của PRD v3 §6.
 
@@ -96,14 +117,35 @@ node dist/headless.js --seed 1 --night 1|2|3 --ticks 600 --out out.jsonl \
 - Với cùng seed, scenario và inputs, output giống hệt từng byte.
 - Không có tuning nào là `null`. `fall_enabled` là `true`: Mây rơi được khỏi mép đảo và phát `player_hit` với `by: "fall"`.
 
+## Benchmark và soak test (PRD v4)
+
+```bash
+npm run bench -- --seed 42 --duration 30 --out bench.json   # = node scripts/bench.mjs …
+npm run soak -- --seed 7 --nights 10 --out soak.json         # = node --expose-gc --single-threaded --max-semi-space-size=1 dist/soak.js …
+```
+
+- **Bench** mở cửa sổ Chrome 1280×720 với vsync tắt (`--disable-gpu-vsync --disable-frame-rate-limit`; trên Linux chạy qua XWayland vì Wayland bỏ qua hai cờ này). Cảnh chuẩn: Đêm 1 đủ hiệu ứng, 200 Bóng Mực lang thang, 100 đom đóm, L1–L3 sáng đầy dầu, camera bay vòng bán kính 30 m ở độ cao 15 m, 15 s một vòng ngược chiều kim đồng hồ. Sau 3 s khởi động thì đo đúng `--duration` giây rồi ghi `bench.json` và thoát mã 0. Thêm `--headless` để chạy không cửa sổ (GPU phần mềm, số thấp hơn nhiều). `peak_mem_mb` là tổng RSS của mọi tiến trình Chrome.
+- **Soak** chạy 10 Đêm liền (1 → 2 → 3 xoay vòng, Đêm thứ i dùng seed 7 + i) với input ngẫu nhiên theo seed, trong một tiến trình Node, không cần trình duyệt.
+
+Kết quả trên máy tự đo (Intel Core Ultra 5 225H, đồ hoạ tích hợp Intel Arc, 30 GB RAM, Linux 7.0, Chrome 157; máy chấm sẽ khác):
+
+| | Kết quả | Ngưỡng |
+|---|---|---|
+| `avg_fps` | 318.1 | ≥ 60 |
+| `p1_low_fps` | 107.7 | ≥ 30 |
+| `load_ms` | 2133 | ≤ 10000 |
+| Soak `crashes` | 0 | 0 |
+| Soak bộ nhớ | 64.0 → 70.3 MB (×1.10) | ≤ ×1.2 |
+
 ## Kiểm thử
 
 ```bash
-npm test          # 163 test Vitest: luật chơi qua createSim, contract qua runHeadless, hàm thuần của client
+npm test          # 190 test Vitest: luật chơi qua createSim, contract qua runHeadless, soak, bảng xếp hạng, server, hàm thuần của client
 npm run verify    # build rồi chạy binary thật với 68 case + 2 kiểm tra tĩnh, ghi bằng chứng
+node scripts/ui-check.mjs docs/evidence/phase-4/ui   # lái game đã build trong Chrome, chụp ảnh và kiểm chữ ≥ 18 px, phụ đề, đổi phím, bảng xếp hạng
 ```
 
-Bằng chứng nằm ở [docs/evidence/phase-1/](docs/evidence/phase-1/README.md), [docs/evidence/phase-2/](docs/evidence/phase-2/verify-report.md) và [docs/evidence/phase-3/](docs/evidence/phase-3/verify-report.md). Mọi số kỳ vọng trong `scenarios/cases.mjs` được tính tay từ PRD, mỗi case ghi rõ cách tính. Mỗi tiêu chí AC-01 đến AC-17 của PRD v3 có ít nhất một case chạy trên binary thật. AC-18 có test hàm thuần và ảnh chụp.
+Bằng chứng nằm ở [docs/evidence/phase-1/](docs/evidence/phase-1/README.md), [phase-2](docs/evidence/phase-2/verify-report.md), [phase-3](docs/evidence/phase-3/verify-report.md) và [phase-4](docs/evidence/phase-4/) (`bench.json`, `soak.json`, `verify-report.md`, ảnh và log giao diện ở `ui/`). Mọi số kỳ vọng trong `scenarios/cases.mjs` được tính tay từ PRD, mỗi case ghi rõ cách tính. Mỗi tiêu chí AC-01 đến AC-17 của PRD v3 có ít nhất một case chạy trên binary thật. AC-18 có test hàm thuần và ảnh chụp.
 
 ## Sáng tạo của tôi
 
@@ -133,11 +175,12 @@ Mọi phần dưới đây chỉ nằm ở lớp giao diện (`src/client/`). Ch
 
 | File | Nội dung |
 |---|---|
-| [PRD.md](PRD.md), [PRD_v2.md](PRD_v2.md), [PRD_v3.md](PRD_v3.md) | Yêu cầu Phase 1 (Test Contract v1.0), Phase 2 (v1.1) và Phase 3 (v1.2, hiện hành) |
+| [PRD.md](PRD.md), [PRD_v2.md](PRD_v2.md), [PRD_v3.md](PRD_v3.md), [PRD_v4.md](PRD_v4.md) | Yêu cầu Phase 1 (Test Contract v1.0), Phase 2 (v1.1), Phase 3 (v1.2) và Phase 4 (v1.3, hiện hành) |
 | [CHANGELOG.md](CHANGELOG.md) | Breaking changes từng phase |
-| [docs/NOTES.md](docs/NOTES.md) | Giả định đã chốt (A1–A49), nhật ký dùng AI, retro |
+| [docs/NOTES.md](docs/NOTES.md) | Giả định đã chốt (A1–A60), nhật ký dùng AI, đánh giá từng phase |
+| [docs/RETRO.md](docs/RETRO.md) | Retro cả 4 phase |
 | [Architect.md](Architect.md) | Kiến trúc: sim, headless, client |
 | [docs/PLAN.md](docs/PLAN.md) | Kế hoạch theo mốc |
 | [GLOSSARY.md](GLOSSARY.md), [docs/adr/](docs/adr/) | Thuật ngữ và quyết định kiến trúc (ADR-0003: đèn có dầu, thắng ở bình minh, thứ tự tick v1.2) |
 | [CLAUDE.md](CLAUDE.md), [.claude/](.claude/) | Harness AI: hướng dẫn agent, hook chạy test, skill `verify-phase`, `game-engine` |
-| [CREDITS.md](CREDITS.md) | Nguồn thư viện, phông chữ, công cụ AI |
+| [CREDITS.md](CREDITS.md), [LICENSE](LICENSE) | Nguồn thư viện, phông chữ, công cụ AI; giấy phép MIT |
