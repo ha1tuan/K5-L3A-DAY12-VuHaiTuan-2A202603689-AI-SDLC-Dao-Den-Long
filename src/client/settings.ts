@@ -1,25 +1,53 @@
 import { ACTIONS, keyLabel, type Action, type KeyBindings } from './input/keybindings';
+import { loadSettings, saveSettings, type Settings } from './settingsStore';
 
-/** Key-rebinding panel opened with Esc. Saves through KeyBindings (localStorage). */
+type Store = Pick<Storage, 'getItem' | 'setItem'> | null;
+
+/**
+ * Pause menu (F-05) with the settings page inside it (F-06): Tiếp tục / Chơi lại Đêm / Về menu,
+ * volume, mouse sensitivity and key rebinding. Opens and closes with the sim's paused flag.
+ */
 export class SettingsPanel {
   private root = document.querySelector('#settings') as HTMLDialogElement;
   private list = this.root.querySelector('ul')!;
   private message = this.root.querySelector('.message') as HTMLElement;
+  private volume = this.root.querySelector('#volume') as HTMLInputElement;
+  private sensitivity = this.root.querySelector('#sensitivity') as HTMLInputElement;
   private capturing: Action | null = null;
+  values: Settings;
   onChange: () => void = () => {};
+  onResume: () => void = () => {};
+  onRestart: () => void = () => {};
+  onMenu: () => void = () => {};
 
-  constructor(private readonly bindings: KeyBindings) {
+  constructor(
+    private readonly bindings: KeyBindings,
+    private readonly storage: Store,
+  ) {
+    this.values = loadSettings(storage);
+    this.volume.value = String(this.values.volume);
+    this.sensitivity.value = String(this.values.sensitivity);
+    const saveSliders = () => {
+      this.values = { volume: Number(this.volume.value), sensitivity: Number(this.sensitivity.value) };
+      saveSettings(this.storage, this.values);
+      this.onChange();
+    };
+    this.volume.addEventListener('input', saveSliders);
+    this.sensitivity.addEventListener('input', saveSliders);
+
     this.root.querySelector('[data-reset]')!.addEventListener('click', () => {
       this.bindings.reset();
       this.say('Đã khôi phục phím mặc định.');
       this.render();
       this.onChange();
     });
-    this.root.querySelector('[data-close]')!.addEventListener('click', () => this.close());
+    this.root.querySelector('[data-close]')!.addEventListener('click', () => this.onResume());
+    this.root.querySelector('[data-restart]')!.addEventListener('click', () => this.onRestart());
+    this.root.querySelector('[data-menu]')!.addEventListener('click', () => this.onMenu());
     this.root.addEventListener('cancel', (e) => {
+      // Esc inside the dialog: cancel a key capture, otherwise resume (handled by the game's Esc).
       e.preventDefault();
       if (this.capturing) this.stopCapture('Đã huỷ đổi phím.');
-      else this.close();
     });
     window.addEventListener(
       'keydown',
@@ -42,15 +70,20 @@ export class SettingsPanel {
     return this.root.open;
   }
 
+  get isCapturing(): boolean {
+    return this.capturing !== null;
+  }
+
   open(): void {
+    if (this.root.open) return;
     this.render();
-    this.say('Chọn một hành động rồi nhấn phím mới.');
+    this.say('Đêm đang dừng. Đổi phím: chọn một hành động rồi nhấn phím mới.');
     this.root.showModal();
   }
 
   close(): void {
     this.capturing = null;
-    this.root.close();
+    if (this.root.open) this.root.close();
   }
 
   private say(text: string): void {

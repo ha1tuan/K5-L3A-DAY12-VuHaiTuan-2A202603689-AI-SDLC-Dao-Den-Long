@@ -41,7 +41,7 @@ export class Controls {
     const { move, arrived } = moveToward(playerPos, this.target);
     if (arrived) this.target = null;
     const on = (a: Action) => this.held.has(a) || this.latched.has(a);
-    const ctrl: ControlState = { move, camYawDeg: 0, jump: on('jump'), interact: on('interact'), pulse: on('pulse') };
+    const ctrl: ControlState = { move, camYawDeg: 0, jump: on('jump'), interact: on('interact'), pulse: on('pulse'), dash: on('dash'), pause: false };
     this.latched.clear();
     return ctrl;
   }
