@@ -1,0 +1,217 @@
+// End-to-end cases for scripts/verify.mjs. Every expected number is worked out by hand from
+// game.contract.json tuning (A10 in docs/NOTES.md), never copied from program output.
+//
+// Fields:
+//   req          requirement it proves (PRD / Test Contract / assumption id)
+//   scenario     scenarios/<name>.json   inputs: inputs/<name>.json
+//   events       events that must appear, in this order (other events may sit between)
+//   noEvents     event names that must not appear at all
+//   eventCount   exact number of events with a given name
+//   snapshotAt   { tick: partial snapshot } deep-matched against the snapshot of that tick
+//   end          partial match of the final `end` line
+//   exit         expected exit code (default 0); non-zero cases skip output checks
+
+export const cases = [
+  {
+    name: 'idle-default-night',
+    req: 'B: snapshot tick 0 + cadence + end line; default Night 1 (5 lanterns, 30 motes, 2 shades)',
+    seed: 1,
+    ticks: 60,
+    snapshotAt: {
+      0: { tick: 0, sim_tick: 0, state: 'playing', time_left_s: 300, score: 0, player: { pos: [0, 0, 0], flames: 3, carried: 0 }, motes_active: 30 },
+      60: { time_left_s: 299 },
+    },
+    snapshotTicks: [0, 10, 20, 30, 40, 50, 60],
+    end: { type: 'end', ticks: 60, state: 'playing' },
+  },
+  {
+    name: 'move-forward',
+    req: 'C: move [0,1] at yaw 0 walks +Z at player_speed 6 m/s',
+    scenario: 'quiet',
+    inputs: 'move-forward',
+    ticks: 60,
+    snapshotAt: { 60: { player: { pos: [0, 0, 6] } } },
+  },
+  {
+    name: 'move-yaw',
+    req: 'C: x\' = x·cosθ + z·sinθ, z\' = −x·sinθ + z·cosθ; θ = 90° turns [0,1] into +X',
+    scenario: 'quiet',
+    inputs: 'move-yaw-90',
+    ticks: 60,
+    snapshotAt: { 60: { player: { pos: [6, 0, 0] } } },
+  },
+  {
+    name: 'move-normalize',
+    req: 'C: vectors longer than 1 are normalized; 6/√2 = 4.2426 → 4.243',
+    scenario: 'quiet',
+    inputs: 'move-diagonal',
+    ticks: 60,
+    snapshotAt: { 60: { player: { pos: [4.243, 0, 4.243] } } },
+  },
+  {
+    name: 'pickup',
+    req: 'A3: auto pickup at distance ≤ pickup_radius 1.0; mote at z=2.95, Mây walks 0.1 m/tick → z=2.0 (gap 0.95) at tick 20, z=1.9 (gap 1.05) at tick 19',
+    scenario: 'pickup',
+    inputs: 'move-forward',
+    ticks: 30,
+    events: [{ tick: 20, name: 'mote_picked', data: { carried: 1 } }],
+    end: { score: 10 },
+  },
+  {
+    name: 'pickup-full',
+    req: 'A3: no pickup at carry_capacity 5',
+    scenario: 'pickup-full',
+    ticks: 10,
+    noEvents: ['mote_picked'],
+    snapshotAt: { 10: { motes_active: 1, player: { carried: 5 } } },
+  },
+  {
+    name: 'deposit-partial',
+    req: 'A4: interact edge deposits min(carried 5, cost 8 − 0) = 5; not lit',
+    scenario: 'deposit-partial',
+    inputs: 'interact-once',
+    ticks: 10,
+    events: [{ tick: 1, name: 'deposit', data: { lantern_id: 'L1', amount: 5, deposited: 5 } }],
+    noEvents: ['lantern_lit'],
+  },
+  {
+    name: 'light-one',
+    req: 'A4/A8: deposits 3 of 5 to reach 8 → lantern_lit same tick, +100',
+    scenario: 'light-one',
+    inputs: 'interact-once',
+    ticks: 10,
+    events: [
+      { tick: 1, name: 'deposit', data: { lantern_id: 'L1', amount: 3, deposited: 8 } },
+      { tick: 1, name: 'lantern_lit', data: { lantern_id: 'L1' } },
+    ],
+    snapshotAt: { 10: { player: { carried: 2 }, score: 100 } },
+  },
+  {
+    name: 'win-all-lit',
+    req: 'Win all_lit; score = 100 + 2·floor(300 − 1/60 = 299.98) + 50·3 = 100 + 598 + 150 = 848',
+    scenario: 'win-all-lit',
+    inputs: 'interact-once',
+    ticks: 100,
+    events: [
+      { tick: 1, name: 'lantern_lit', data: { lantern_id: 'L5' } },
+      { tick: 1, name: 'game_over', data: { result: 'won', reason: 'all_lit' } },
+    ],
+    end: { ticks: 1, state: 'won', score: 848 },
+  },
+  {
+    name: 'score-win',
+    req: 'A8: pick at tick 1 (+10), deposit at tick 2 lights L5 (+100), bonus 2·floor(300 − 2/60 = 299.97) + 50·2 = 598 + 100 → 808',
+    scenario: 'score-win',
+    inputs: 'interact-at-1',
+    ticks: 100,
+    events: [
+      { tick: 1, name: 'mote_picked', data: { carried: 1 } },
+      { tick: 2, name: 'deposit', data: { lantern_id: 'L5', amount: 1, deposited: 8 } },
+      { tick: 2, name: 'game_over', data: { result: 'won', reason: 'all_lit' } },
+    ],
+    end: { ticks: 2, state: 'won', score: 808 },
+  },
+  {
+    name: 'hit-drop',
+    req: 'A7: hit costs 1 flame and drops floor(5 × 0.5) = 2, which vanish',
+    scenario: 'hit-drop',
+    ticks: 10,
+    events: [{ tick: 1, name: 'player_hit', data: { by: 'shade', flames: 2, dropped: 2 } }],
+    eventCount: { player_hit: 1 },
+    snapshotAt: { 10: { player: { carried: 3, flames: 2 }, motes_active: 0 } },
+  },
+  {
+    name: 'invuln-no-double-hit',
+    req: 'A7: invuln_s 1.5 = 90 ticks → hits at 1, 91, 181; third ends with no_flames',
+    scenario: 'invuln-no-double-hit',
+    ticks: 300,
+    events: [
+      { tick: 1, name: 'player_hit', data: { by: 'shade', flames: 2, dropped: 0 } },
+      { tick: 91, name: 'player_hit', data: { by: 'shade', flames: 1, dropped: 0 } },
+      { tick: 181, name: 'player_hit', data: { by: 'shade', flames: 0, dropped: 0 } },
+      { tick: 181, name: 'game_over', data: { result: 'lost', reason: 'no_flames' } },
+    ],
+    eventCount: { player_hit: 3 },
+    end: { ticks: 181, state: 'lost', score: 0 },
+  },
+  {
+    name: 'lose-no-flames',
+    req: 'Lose no_flames on the tick flames reach 0; no win bonus',
+    scenario: 'lose-no-flames',
+    ticks: 100,
+    events: [{ tick: 1, name: 'game_over', data: { result: 'lost', reason: 'no_flames' } }],
+    end: { ticks: 1, state: 'lost', score: 0 },
+  },
+  {
+    name: 'lose-dawn',
+    req: 'Lose dawn when time_left_s 1 reaches 0 after 60 steps',
+    scenario: 'lose-dawn',
+    ticks: 1000,
+    events: [{ tick: 60, name: 'game_over', data: { result: 'lost', reason: 'dawn' } }],
+    snapshotAt: { 60: { state: 'lost', time_left_s: 0 } },
+    end: { ticks: 60, state: 'lost', score: 0 },
+  },
+  {
+    name: 'pulse-stun-push',
+    req: 'A5: pulse costs 2, stuns S1 at 3 m (≤ 6), pushes it 4 m to 7 m; S2 at 10 m untouched; +25',
+    scenario: 'pulse-stun-push',
+    inputs: 'pulse-once',
+    ticks: 10,
+    events: [{ tick: 1, name: 'pulse', data: { stunned_ids: ['S1'] } }],
+    snapshotAt: { 10: { player: { carried: 1 }, score: 25, shades: [{ id: 'S1', pos: [7, 1, 0], state: 'stunned' }, { id: 'S2', state: 'chase' }] } },
+  },
+  {
+    name: 'pulse-not-enough',
+    req: 'A5: carried 1 < pulse_cost 2 → no pulse, no event',
+    scenario: 'pulse-not-enough',
+    inputs: 'pulse-once',
+    ticks: 10,
+    noEvents: ['pulse'],
+    snapshotAt: { 10: { player: { carried: 1 } } },
+  },
+  {
+    name: 'pulse-cooldown',
+    req: 'A5: pulse_cooldown_s 1.5 = 90 ticks → presses at ticks 1, 89, 91 fire at 1 and 91 only',
+    scenario: 'pulse-cooldown',
+    inputs: 'pulse-three-presses',
+    ticks: 120,
+    events: [
+      { tick: 1, name: 'pulse', data: { stunned_ids: [] } },
+      { tick: 91, name: 'pulse', data: { stunned_ids: [] } },
+    ],
+    eventCount: { pulse: 2 },
+    snapshotAt: { 120: { player: { carried: 1 } } },
+  },
+  {
+    name: 'safe-radius-block',
+    req: 'A6: a shade cannot enter safe_radius 6 around a lit lantern; it waits on the rim',
+    scenario: 'safe-radius-block',
+    ticks: 600,
+    noEvents: ['player_hit'],
+    snapshotAt: { 600: { shades: [{ pos: [6, 1, 0], state: 'chase' }] } },
+  },
+  {
+    name: 'shade-spawn',
+    req: 'A6: one new shade every 60 s up to 5 → S3, S4, S5 at ticks 3600, 7200, 10800, never S6',
+    scenario: 'shade-spawn',
+    seed: 11,
+    ticks: 14400,
+    snapshotEvery: 600,
+    events: [
+      { tick: 3600, name: 'shade_spawned', data: { id: 'S3' } },
+      { tick: 7200, name: 'shade_spawned', data: { id: 'S4' } },
+      { tick: 10800, name: 'shade_spawned', data: { id: 'S5' } },
+    ],
+    eventCount: { shade_spawned: 3 },
+  },
+  {
+    name: 'determinism-walk',
+    req: 'E: same seed + inputs → byte-identical output (checked for every case; this one exercises randomness)',
+    seed: 42,
+    inputs: 'determinism-walk',
+    ticks: 3000,
+  },
+  { name: 'bad-inputs', req: 'B: frame ticks not strictly increasing → exit 2', inputs: 'bad-ticks', ticks: 10, exit: 2 },
+  { name: 'bad-inputs-json', req: 'B: inputs file is not valid JSON → exit 2', inputs: 'bad-json', ticks: 10, exit: 2 },
+  { name: 'bad-scenario', req: 'B: scenario player.pos is not [x,y,z] → exit 2', scenario: 'bad-scenario', ticks: 10, exit: 2 },
+];

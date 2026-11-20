@@ -9,7 +9,7 @@
     "dev": "vite",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "verify": "node scripts/verify.mjs"
+    "verify": "npm run build --silent && node scripts/verify.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

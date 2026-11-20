@@ -7,7 +7,8 @@ Game 3D **Đảo Đèn Lồng** (AI SDLC lab, 4 phase). Yêu cầu: `PRD.md` (Ph
 - `npm ci && npm run build`: cài và build (web vào `dist/web/`, headless vào `dist/headless.js`)
 - `npm start`: mở game có giao diện (Vite preview)
 - `npm test`: Vitest, chỉ test lõi sim, chạy nhanh
-- `npm run verify`: chạy mọi scenario headless, so kỳ vọng, kiểm tra tính tất định, ghi bằng chứng vào `docs/evidence/phase-N/`
+- `npm run verify`: build rồi chạy binary thật với các case trong `scenarios/cases.mjs` (so kỳ vọng tính tay, chạy 2 lần để so tính tất định, exit 2, quét import cấm trong sim); ghi bằng chứng vào `docs/evidence/phase-N/`. Quy trình: skill `verify-phase`
+- Hook `.claude/hooks/test-after-edit.sh` tự chạy Vitest sau mỗi lần sửa `src/**/*.ts` hoặc `tests/**/*.ts`; test đỏ thì sửa ngay, không đi tiếp
 - Headless: `node dist/headless.js --seed 1 --night 1 [--scenario f] [--inputs f] --ticks N --out o.jsonl [--snapshot-every 10]`
 
 ## Kiến trúc (chi tiết: `Architect.md`)
