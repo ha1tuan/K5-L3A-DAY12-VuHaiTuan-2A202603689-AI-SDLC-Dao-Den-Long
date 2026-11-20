@@ -4,7 +4,7 @@ import { InputTimeline } from '../../src/headless/timeline';
 describe('InputTimeline', () => {
   it('defaults to standing still with every button released before the first frame', () => {
     const t = new InputTimeline([{ tick: 5, move: [1, 0] }]);
-    expect(t.at(0)).toEqual({ move: [0, 0], camYawDeg: 0, jump: false, interact: false, pulse: false });
+    expect(t.at(0)).toEqual({ move: [0, 0], camYawDeg: 0, jump: false, interact: false, pulse: false, dash: false, pause: false });
     expect(t.at(4).move).toEqual([0, 0]);
     expect(t.at(5).move).toEqual([1, 0]);
   });

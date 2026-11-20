@@ -1,6 +1,6 @@
 import type { ControlState } from '../sim';
 
-/** One frame of a contract inputs file (§C); absent fields keep their previous value. */
+/** One frame of a contract inputs file (§C, v1.1 adds dash and pause); absent fields keep their previous value. */
 export interface InputFrame {
   tick: number;
   move?: [number, number];
@@ -9,9 +9,10 @@ export interface InputFrame {
   interact?: boolean;
   pulse?: boolean;
   dash?: boolean;
+  pause?: boolean;
 }
 
-const DEFAULT: ControlState = { move: [0, 0], camYawDeg: 0, jump: false, interact: false, pulse: false };
+const DEFAULT: ControlState = { move: [0, 0], camYawDeg: 0, jump: false, interact: false, pulse: false, dash: false, pause: false };
 
 /** Held control state at any tick, built from frames with strictly increasing ticks. */
 export class InputTimeline {
@@ -27,6 +28,8 @@ export class InputTimeline {
         jump: f.jump ?? cur.jump,
         interact: f.interact ?? cur.interact,
         pulse: f.pulse ?? cur.pulse,
+        dash: f.dash ?? cur.dash,
+        pause: f.pause ?? cur.pause,
       };
       this.ticks.push(f.tick);
       this.states.push(cur);

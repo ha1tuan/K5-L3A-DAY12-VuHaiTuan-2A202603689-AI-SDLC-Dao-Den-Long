@@ -1,17 +1,17 @@
-import { createSim, type Scenario } from '../sim';
+import { createSim, type NightId, type Scenario } from '../sim';
 import { endLine, eventLine, snapshotLine } from './format';
 import type { InputTimeline } from './timeline';
 
 export interface HeadlessConfig {
   seed: number;
-  night: 1;
+  night: NightId;
   scenario?: Scenario;
   timeline: InputTimeline;
   ticks: number;
   snapshotEvery: number;
 }
 
-/** Runs the night headlessly and returns the JSONL lines (Test Contract v1.0 §B, §E). */
+/** Runs the night headlessly and returns the JSONL lines (Test Contract v1.1). */
 export function runHeadless(cfg: HeadlessConfig): string[] {
   const sim = createSim({ seed: cfg.seed, night: cfg.night, scenario: cfg.scenario });
   const lines = [snapshotLine(sim.state)];

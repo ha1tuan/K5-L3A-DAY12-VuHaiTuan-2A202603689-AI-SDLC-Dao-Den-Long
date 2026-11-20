@@ -1,4 +1,5 @@
 export type Vec3 = [number, number, number];
+export type NightId = 1 | 2 | 3;
 
 /** Buttons are HELD levels for this tick; the sim detects rising edges itself. */
 export interface ControlState {
@@ -7,6 +8,8 @@ export interface ControlState {
   jump: boolean;
   interact: boolean;
   pulse: boolean;
+  dash?: boolean;
+  pause?: boolean;
 }
 
 export interface Tuning {
@@ -19,6 +22,8 @@ export interface Tuning {
   pulse_cost: number;
   pulse_radius: number;
   night1_duration_s: number;
+  night2_duration_s: number;
+  night3_duration_s: number;
   flames: number;
   invuln_s: number;
   hit_drop_ratio: number;
@@ -29,6 +34,9 @@ export interface Tuning {
   shade_speed: number;
   shade_hit_radius: number;
   fall_enabled: boolean;
+  dash_speed: number;
+  dash_duration_s: number;
+  dash_cooldown_s: number;
   score: {
     per_mote: number;
     per_lantern: number;
@@ -38,28 +46,56 @@ export interface Tuning {
   };
 }
 
-/** Validated scenario (Test Contract v1.0 §D). Absent fields keep game defaults. */
+export type GameStatus = 'playing' | 'won' | 'lost';
+export type EndReason = 'all_lit' | 'dawn' | 'no_flames';
+export type ShadeMode = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+export type DrifterMode = 'idle' | 'chase' | 'flee' | 'removed';
+export type MoteKind = 'random' | 'dropped';
+
+/** Validated scenario (Test Contract v1.1). Absent fields keep game defaults. */
 export interface Scenario {
-  player?: { pos?: Vec3; carried?: number; flames?: number };
+  player?: {
+    pos?: Vec3;
+    carried?: number;
+    flames?: number;
+    invuln_ticks?: number;
+    dash_cd_ticks?: number;
+    pulse_cd_ticks?: number;
+    charm_ticks?: number;
+  };
   random_motes?: boolean;
   random_shades?: boolean;
+  random_drifters?: boolean;
+  wind_enabled?: boolean;
   motes?: Vec3[];
-  shades?: { id?: string; pos: Vec3 }[];
+  shades?: { id?: string; pos: Vec3; state?: ShadeMode; state_ticks_left?: number }[];
+  drifters?: { id?: string; pos: Vec3; state?: Exclude<DrifterMode, 'removed'>; stolen?: number }[];
+  charms?: { id: string; pos?: Vec3; available?: boolean; respawn_ticks?: number }[];
   lanterns?: { id: string; pos?: Vec3; deposited?: number; lit?: boolean }[];
   time_left_s?: number;
 }
 
-export type GameStatus = 'playing' | 'won' | 'lost';
-export type EndReason = 'all_lit' | 'dawn' | 'no_flames';
-export type ShadeMode = 'chase' | 'stunned';
-
 export interface Player {
   pos: Vec3;
-  vy: number;
+  /** Own velocity in m/s (wind is added on top when moving, not stored here). */
+  vel: Vec3;
+  grounded: boolean;
+  /** Unit XZ direction Mây faces; dash goes this way when standing still. */
+  facing: [number, number];
   flames: number;
   carried: number;
   invulnTicks: number;
   pulseCooldownTicks: number;
+  dashCooldownTicks: number;
+  dashTicks: number;
+  dashDir: [number, number];
+  /** True while a dash started in the air keeps Y fixed. */
+  dashHoldsY: boolean;
+  charmTicks: number;
+  /** Horizontal velocity locked by a bounce pad until landing. */
+  launched: boolean;
+  /** Ticks left before respawning after a fall (0 = alive on the map). */
+  respawnTicks: number;
 }
 
 export interface Lantern {
@@ -73,16 +109,53 @@ export interface Shade {
   id: string;
   pos: Vec3;
   state: ShadeMode;
-  stunTicks: number;
+  /** Ticks left in spawning / recoil / stunned. */
+  stateTicks: number;
+  pushTicks: number;
+  pushDir: [number, number];
+  wanderTarget: Vec3 | null;
+  wanderTicks: number;
 }
 
 export interface Mote {
   id: string;
   pos: Vec3;
+  kind: MoteKind;
+  /** Dropped motes only: ticks before vanishing. */
+  ttlTicks: number | null;
+  /** First sim tick at which it can be picked up. */
+  pickableFrom: number;
+}
+
+export interface Drifter {
+  id: string;
+  pos: Vec3;
+  state: DrifterMode;
+  stolen: number;
+  stateTicks: number;
+  wanderTarget: Vec3 | null;
+  wanderTicks: number;
+}
+
+export interface Charm {
+  id: string;
+  pos: Vec3;
+  available: boolean;
+  respawnTicks: number;
+}
+
+export interface Wind {
+  active: boolean;
+  dirDeg: number;
 }
 
 export interface SimState {
+  /** Steps run, including paused ones. */
   tick: number;
+  /** Gameplay steps run (frozen while paused). */
+  simTick: number;
+  paused: boolean;
+  night: NightId;
   status: GameStatus;
   endReason: EndReason | null;
   timeLeftS: number;
@@ -91,21 +164,31 @@ export interface SimState {
   lanterns: Lantern[];
   shades: Shade[];
   motes: Mote[];
+  drifters: Drifter[];
+  charms: Charm[];
+  wind: Wind;
 }
 
 type Ev<N extends string, D> = { tick: number; name: N; data: D };
 export type SimEvent =
+  | Ev<'night_start', { night: NightId }>
   | Ev<'mote_picked', { carried: number }>
   | Ev<'deposit', { lantern_id: string; amount: number; deposited: number }>
   | Ev<'lantern_lit', { lantern_id: string }>
   | Ev<'pulse', { stunned_ids: string[] }>
-  | Ev<'player_hit', { by: 'shade' | 'fall'; flames: number; dropped: number }>
+  | Ev<'player_hit', { by: 'shade'; flames: number; dropped: number } | { by: 'fall'; flames: number; dropped: number; lost: number }>
   | Ev<'shade_spawned', { id: string }>
+  | Ev<'dash', Record<string, never>>
+  | Ev<'charm_picked', { charm_id: string; charm_ticks: number }>
+  | Ev<'drifter_steal', { drifter_id: string; amount: number; carried: number }>
+  | Ev<'drifter_drop', { drifter_id: string; amount: number }>
+  | Ev<'paused', Record<string, never>>
+  | Ev<'resumed', Record<string, never>>
   | Ev<'game_over', { result: 'won' | 'lost'; reason: EndReason }>;
 
 export interface SimConfig {
   seed: number;
-  night: 1;
+  night: NightId;
   scenario?: Scenario;
   tuning?: Tuning;
 }

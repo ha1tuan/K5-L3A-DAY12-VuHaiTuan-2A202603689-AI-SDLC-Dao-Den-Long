@@ -1,59 +1,64 @@
 import { describe, expect, it } from 'vitest';
-import { IDLE, names, press, quietSim, run } from './helpers';
+import { once, press, quietSim, run } from './helpers';
 
-const twoShades = { shades: [{ pos: [3, 1, 0] as [number, number, number] }, { pos: [0, 1, 10] as [number, number, number] }] };
-
-describe('Tỏa sáng (pulse)', () => {
-  it('burns pulse_cost (2) carried motes, stuns shades within pulse_radius and pushes them pulse_push_m (4 m) away', () => {
-    const sim = quietSim({ ...twoShades, player: { carried: 3 } });
-    const events = sim.step({ ...IDLE, pulse: true });
-    expect(events).toEqual([{ tick: 1, name: 'pulse', data: { stunned_ids: ['S1'] } }]);
+describe('Tỏa Sáng (§3.5)', () => {
+  it('costs 3, stuns shades within 5 m (3D, from 0.8 m above the feet) and scores 5 each', () => {
+    const sim = quietSim({ player: { carried: 4 }, shades: [{ pos: [3, 1, 0] }, { pos: [0, 1, 10] }] });
+    expect(once(sim, { pulse: true })).toEqual([{ tick: 1, name: 'pulse', data: { stunned_ids: ['S1'] } }]);
     expect(sim.state.player.carried).toBe(1);
-    const [s1, s2] = sim.state.shades;
-    expect(s1.state).toBe('stunned');
-    expect(s1.pos[0]).toBeCloseTo(7, 6);
-    expect(s2.state).toBe('chase');
-    expect(sim.state.score).toBe(25);
+    expect(sim.state.shades.map((s) => s.state)).toEqual(['stunned', 'chase']);
+    expect(sim.state.score).toBe(5);
   });
 
-  it('a stunned shade stays still and harmless for pulse_stun_s (3 s), then chases again', () => {
-    const sim = quietSim({ shades: [{ pos: [3, 1, 0] }], player: { carried: 2 } });
-    sim.step({ ...IDLE, pulse: true });
-    run(sim, 178); // through tick 179
+  it('measures the radius in 3D: 4 m away on XZ but 3.2 m higher is out of reach', () => {
+    const sim = quietSim({ player: { carried: 3 }, shades: [{ pos: [3, 4.5, 0] }, { pos: [4, 4, 0] }] });
+    expect(once(sim, { pulse: true })[0].data).toEqual({ stunned_ids: ['S1'] });
+  });
+
+  it('pushes a stunned shade back 4 m in total over the first 15 ticks', () => {
+    const sim = quietSim({ player: { carried: 3 }, shades: [{ pos: [3, 1, 0] }] });
+    once(sim, { pulse: true });
+    expect(sim.state.shades[0].pos[0]).toBeCloseTo(3 + 4 / 15, 9);
+    run(sim, 14);
+    expect(sim.state.shades[0].pos[0]).toBeCloseTo(7, 9);
+    run(sim, 30);
+    expect(sim.state.shades[0].pos[0]).toBeCloseTo(7, 9);
+  });
+
+  it('pushes along +X when the shade sits exactly on Mây', () => {
+    const sim = quietSim({ player: { carried: 3 }, shades: [{ pos: [0, 1, 0] }] });
+    once(sim, { pulse: true });
+    run(sim, 14);
+    expect(sim.state.shades[0].pos[0]).toBeCloseTo(4, 9);
+    expect(sim.state.shades[0].pos[2]).toBeCloseTo(0, 9);
+  });
+
+  it('stuns for 120 ticks, then the shade wakes and chases again', () => {
+    const sim = quietSim({ player: { carried: 3 }, shades: [{ pos: [3, 1, 0] }] });
+    once(sim, { pulse: true });
+    run(sim, 119); // tick 120
     expect(sim.state.shades[0].state).toBe('stunned');
-    expect(sim.state.shades[0].pos[0]).toBeCloseTo(7, 6);
-    run(sim, 1); // tick 180
+    run(sim, 1); // tick 121
     expect(sim.state.shades[0].state).toBe('chase');
   });
 
-  it('a stunned shade cannot hit even when on top of Mây', () => {
-    const sim = quietSim({ shades: [{ pos: [0.2, 1, 0] }], player: { carried: 2 } });
-    // the pulse resolves before hits in the same tick (ADR-0001)
-    const events = sim.step({ ...IDLE, pulse: true, move: [0, 0] });
-    expect(names(events)).toEqual(['pulse']);
-    expect(sim.state.player.flames).toBe(3);
+  it('hitting an already stunned shade refreshes the stun and still scores', () => {
+    const sim = quietSim({ player: { carried: 3 }, shades: [{ pos: [2, 1, 0], state: 'stunned', state_ticks_left: 5 }] });
+    once(sim, { pulse: true });
+    expect(sim.state.shades[0].stateTicks).toBe(120);
+    expect(sim.state.score).toBe(5);
   });
 
-  it('does nothing without enough carried motes', () => {
-    const sim = quietSim({ ...twoShades, player: { carried: 1 } });
+  it('does not fire with fewer than 3 carried', () => {
+    const sim = quietSim({ player: { carried: 2 }, shades: [{ pos: [3, 1, 0] }] });
     expect(press(sim, 'pulse')).toEqual([]);
-    expect(sim.state.player.carried).toBe(1);
+    expect(sim.state.player.carried).toBe(2);
   });
 
-  it('still fires (and costs) with nobody in range, reporting empty stunned_ids', () => {
-    const sim = quietSim({ player: { carried: 2 } });
-    expect(press(sim, 'pulse')).toEqual([{ tick: 1, name: 'pulse', data: { stunned_ids: [] } }]);
-    expect(sim.state.player.carried).toBe(0);
-  });
-
-  it('respects pulse_cooldown_s (1.5 s = 90 ticks)', () => {
-    const sim = quietSim({ player: { carried: 5 } });
+  it('has a 3 s (180 tick) cooldown', () => {
+    const sim = quietSim({ player: { carried: 10 } });
     const ticks: number[] = [];
-    for (let t = 0; t < 120; t++) {
-      const pressNow = t === 0 || t === 88 || t === 90; // ticks 1, 89, 91
-      for (const e of sim.step({ ...IDLE, pulse: pressNow })) ticks.push(e.tick);
-    }
-    expect(ticks).toEqual([1, 91]);
-    expect(sim.state.player.carried).toBe(1);
+    for (let k = 0; k < 200; k++) for (const e of once(sim, { pulse: k === 0 || k === 178 || k === 180 })) ticks.push(e.tick);
+    expect(ticks).toEqual([1, 181]);
   });
 });

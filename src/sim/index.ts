@@ -1,21 +1,31 @@
 import { CONTRACT_TUNING } from './tuning';
 import { buildInitialState } from './scenario';
 import { createRng } from './rng';
-import { stepState, type StepMemory } from './step';
+import { nightDef } from './nights';
+import { stepState } from './step';
+import type { StepMemory } from './systems/context';
 import type { ControlState, Sim, SimConfig, SimEvent } from './types';
 
 export type * from './types';
 
 export function createSim(cfg: SimConfig): Sim {
   const tuning = cfg.tuning ?? CONTRACT_TUNING;
+  const def = nightDef(cfg.night, tuning);
   const rng = createRng(cfg.seed);
-  const { state, ids } = buildInitialState(tuning, rng, cfg.scenario);
+  const sc = cfg.scenario ?? {};
+  const { state, ids } = buildInitialState(def, tuning, rng, sc);
   const memory: StepMemory = {
     prev: null,
     ids,
     startTimeLeftS: state.timeLeftS,
-    randomMotes: cfg.scenario?.random_motes !== false,
-    randomShades: cfg.scenario?.random_shades !== false,
+    randomMotes: sc.random_motes !== false,
+    randomShades: sc.random_shades !== false,
+    randomDrifters: sc.random_drifters !== false,
+    windEnabled: sc.wind_enabled ?? def.wind,
+    windDirs: [],
+    // A separate stream so the gust directions depend on the seed alone (AC-09.3).
+    windRng: createRng((cfg.seed ^ 0x5bd1e995) >>> 0),
+    started: false,
   };
   return {
     get state() {
@@ -23,11 +33,15 @@ export function createSim(cfg: SimConfig): Sim {
     },
     step(ctrl: ControlState): SimEvent[] {
       if (state.status !== 'playing') return [];
-      return stepState(state, ctrl, { tuning, rng, memory });
+      return stepState(state, ctrl, { tuning, def, rng, memory });
     },
   };
 }
 
-/** Read-only constants the client needs for display (not gameplay inputs). */
+/** Read-only constants and map data the client needs for display (not gameplay inputs). */
 export { CONTRACT_TUNING, secondsToTicks, TICKS_PER_SECOND } from './tuning';
-export { ISLAND_RADIUS } from './world';
+export { nightDef, type NightDef, type BouncePad } from './nights';
+export type { Column } from './terrain';
+export { WIND_EVERY_TICKS, WIND_GUST_TICKS, WIND_WARN_TICKS } from './world';
+/** Night 1 island radius (kept for the Phase 1 client until it renders every night from nightDef). */
+export const ISLAND_RADIUS = 40;
