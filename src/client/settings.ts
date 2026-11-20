@@ -5,7 +5,7 @@ type Store = Pick<Storage, 'getItem' | 'setItem'> | null;
 
 /**
  * Pause menu (F-05) with the settings page inside it (F-06): Tiếp tục / Chơi lại Đêm / Về menu,
- * volume, mouse sensitivity and key rebinding. Opens and closes with the sim's paused flag.
+ * volume, mouse sensitivity, the accessible palette (PRD v3 §5.6) and key rebinding. Opens and closes with the sim's paused flag.
  */
 export class SettingsPanel {
   private root = document.querySelector('#settings') as HTMLDialogElement;
@@ -13,6 +13,7 @@ export class SettingsPanel {
   private message = this.root.querySelector('.message') as HTMLElement;
   private volume = this.root.querySelector('#volume') as HTMLInputElement;
   private sensitivity = this.root.querySelector('#sensitivity') as HTMLInputElement;
+  private colorblind = this.root.querySelector('#colorblind') as HTMLInputElement;
   private capturing: Action | null = null;
   values: Settings;
   onChange: () => void = () => {};
@@ -27,13 +28,15 @@ export class SettingsPanel {
     this.values = loadSettings(storage);
     this.volume.value = String(this.values.volume);
     this.sensitivity.value = String(this.values.sensitivity);
+    this.colorblind.checked = this.values.colorblind;
     const saveSliders = () => {
-      this.values = { volume: Number(this.volume.value), sensitivity: Number(this.sensitivity.value) };
+      this.values = { volume: Number(this.volume.value), sensitivity: Number(this.sensitivity.value), colorblind: this.colorblind.checked };
       saveSettings(this.storage, this.values);
       this.onChange();
     };
     this.volume.addEventListener('input', saveSliders);
     this.sensitivity.addEventListener('input', saveSliders);
+    this.colorblind.addEventListener('change', saveSliders);
 
     this.root.querySelector('[data-reset]')!.addEventListener('click', () => {
       this.bindings.reset();

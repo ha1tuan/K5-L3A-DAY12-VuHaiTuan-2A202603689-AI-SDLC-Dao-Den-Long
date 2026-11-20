@@ -9,6 +9,9 @@
   --paper: #f3e6c9;
   --paper-dim: rgba(243, 230, 201, 0.62);
   --glass: rgba(22, 27, 61, 0.55);
+  /* Warnings; "Bảng màu dễ phân biệt" turns them white with ⚠ (PRD v3 §5.6). */
+  --warn: #ff5a5f;
+  --warn-icon: '';
 
   --font: 'Baloo 2', 'Nunito', system-ui, sans-serif;
   --step--1: 0.875rem;
@@ -66,7 +69,7 @@ button:hover { background: var(--amber-soft); }
   box-shadow: inset -5px -2px 0 rgba(22, 27, 61, 0.55), 0 0 12px rgba(243, 230, 201, 0.5);
 }
 #clock { font-weight: 700; font-size: var(--step-1); font-variant-numeric: tabular-nums; }
-#clock.late { color: #ff5a5f; animation: blink 1s steps(2, start) infinite; }
+#clock.late { color: var(--warn); animation: blink 1s steps(2, start) infinite; }
 @keyframes blink { to { visibility: hidden; } }
 .hud-top .center { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .lit-label { font-size: var(--step-0); }
@@ -101,7 +104,7 @@ li.lit .fill { opacity: 0.55; }
 }
 .vitals { display: flex; flex-direction: column; align-items: start; gap: 8px; }
 .flames.flash { animation: flash 0.6s ease-out; }
-@keyframes flash { 0%, 40% { filter: drop-shadow(0 0 12px #ff5a5f) brightness(1.8); } 100% { filter: none; } }
+@keyframes flash { 0%, 40% { filter: drop-shadow(0 0 12px var(--warn)) brightness(1.8); } 100% { filter: none; } }
 .hud-bottom .spacer { flex: 1; }
 .hud-bottom .keys { flex: 1; }
 .jar-wrap { flex-direction: column; }
@@ -222,3 +225,23 @@ dialog .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .elder blockquote p:nth-child(3) { animation-delay: 1.8s; }
 @keyframes line-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .elder blockquote p { animation: none; opacity: 1; } }
+
+/* ---------- Phase 3: fuel, low-fuel warning, accessible palette ---------- */
+body.colorblind { --warn: #ffffff; --warn-icon: '⚠ '; }
+#clock.late::before, .warn::before { content: var(--warn-icon); }
+.warn { color: var(--warn); font-weight: 700; }
+.fuel { width: 28px; height: 4px; margin-top: 3px; border-radius: 2px; background: rgba(243, 230, 201, 0.18); overflow: hidden; }
+.fuel span { display: block; height: 100%; width: calc(var(--fuel) * 100%); background: var(--amber-soft); }
+li.weak .fuel span { background: var(--warn); }
+li.weak .lantern, li.weak .fuel { animation: lowfuel 1s steps(1, end) infinite; }
+@keyframes lowfuel { 50% { opacity: 0.35; } }
+/* A dark lantern sags 20% and its paper is torn, so lit and dark differ without colour. */
+li.dark .lantern { transform: scaleY(0.8); transform-origin: top; }
+li.dark .lantern::after {
+  content: ''; position: absolute; left: 30%; top: 25%; width: 40%; height: 45%;
+  background: #120c1c; clip-path: polygon(0 0, 60% 20%, 100% 0, 75% 55%, 100% 100%, 40% 75%, 0 100%, 25% 45%);
+}
+.need { font-size: var(--step--1); color: var(--paper-dim); }
+.toggle { display: flex; align-items: center; gap: 10px; margin: 10px 0; cursor: pointer; }
+.toggle input { width: 18px; height: 18px; accent-color: var(--amber); }
+@media (prefers-reduced-motion: reduce) { li.weak .lantern, li.weak .fuel { animation: none; } }

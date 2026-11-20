@@ -23,6 +23,22 @@ export const PALETTE = {
   uiText: 0xf5f1e6,
 } as const;
 
+/** PRD v3 §5.6: shade rim and eyes, and UI warnings, in the standard or the accessible palette. */
+export interface ColorScheme {
+  shadeRim: number;
+  shadeEye: number;
+  /** CSS colour for warnings (low fuel, late clock, lost flame). */
+  warning: string;
+  /** Shown before warnings so they never rely on colour alone. */
+  warnIcon: string;
+}
+
+export function paletteFor(colorblind: boolean): ColorScheme {
+  return colorblind
+    ? { shadeRim: 0x00b3ff, shadeEye: 0x00b3ff, warning: '#ffffff', warnIcon: '⚠' }
+    : { shadeRim: PALETTE.shadeRim, shadeEye: PALETTE.shadeRim, warning: '#ff5a5f', warnIcon: '' };
+}
+
 /** Ambient light = 0.15 + 0.55 × (lit / total) (AC-10.2). */
 export function ambientIntensity(lit: number, total: number): number {
   return 0.15 + 0.55 * (total > 0 ? lit / total : 0);

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { CONTRACT_TUNING, WIND_EVERY_TICKS, WIND_WARN_TICKS, type Column, type NightDef, type SimEvent, type SimState, type Vec3 } from '../sim';
-import { ambientIntensity, PALETTE as C } from './lighting';
+import { ambientIntensity, paletteFor, PALETTE as C, type ColorScheme } from './lighting';
+import { blinkOn, DARK_SQUASH, fuelFraction, isWeakLantern } from './lanternLook';
 
 const T = CONTRACT_TUNING;
 const TAU = Math.PI * 2;
@@ -23,12 +24,20 @@ interface LanternView {
   light: THREE.PointLight;
   progress: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
   zone: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  /** Paper tear shown while dark (PRD v3 §5.6: dark vs lit without colour). */
+  tear: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
+  fuelBack: THREE.Sprite;
+  fuelBar: THREE.Sprite;
   shown: number;
   litAt: number | null;
 }
 interface ShadeView {
   group: THREE.Group;
   body: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
+  rim: THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>;
+  eyes: THREE.MeshBasicMaterial;
+  /** Thin beam to the lantern it drains. */
+  beam: THREE.Mesh<THREE.CylinderGeometry, THREE.MeshBasicMaterial>;
   phase: number;
 }
 interface DrifterView {
@@ -60,6 +69,7 @@ export class WorldView {
 
   private ambient = new THREE.AmbientLight(0xbfc8ff, 0.15);
   private lanterns = new Map<string, LanternView>();
+  private colors: ColorScheme = paletteFor(false);
   private shades = new Map<string, ShadeView>();
   private drifters = new Map<string, DrifterView>();
   private charms = new Map<string, THREE.Group>();
@@ -458,10 +468,23 @@ export class WorldView {
     );
     zone.rotation.x = -Math.PI / 2;
     zone.position.y = 0.05;
-    group.add(pole, arm, shell, light, progress, zone);
+    const tear = new THREE.Mesh(new THREE.CircleGeometry(0.26, 5), new THREE.MeshBasicMaterial({ color: 0x0b0710, side: THREE.DoubleSide }));
+    tear.position.set(0.9, 3.15, 0.6);
+    tear.rotation.z = 0.6;
+    tear.scale.set(1, 1.6, 1);
+    // Fuel bar above the lantern: sprites always face the camera; the bar grows from its left edge.
+    const fuelBack = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0x1c1030, transparent: true, opacity: 0.75, depthWrite: false }));
+    fuelBack.center.set(0, 0.5);
+    fuelBack.scale.set(1.7, 0.2, 1);
+    fuelBack.position.set(0.05, 4.55, 0);
+    const fuelBar = new THREE.Sprite(new THREE.SpriteMaterial({ color: C.lanternCore, depthWrite: false }));
+    fuelBar.center.set(0, 0.5);
+    fuelBar.position.set(0.08, 4.55, 0.01);
+    fuelBar.renderOrder = 1;
+    group.add(pole, arm, shell, light, progress, zone, tear, fuelBack, fuelBar);
     group.position.set(pos[0], pos[1], pos[2]);
     this.scene.add(group);
-    v = { group, shell, light, progress, zone, shown: -1, litAt: null };
+    v = { group, shell, light, progress, zone, tear, fuelBack, fuelBar, shown: -1, litAt: null };
     this.lanterns.set(id, v);
     return v;
   }
@@ -472,10 +495,10 @@ export class WorldView {
     const group = new THREE.Group();
     const body = new THREE.Mesh(
       new THREE.SphereGeometry(0.75, 18, 14),
-      new THREE.MeshStandardMaterial({ color: C.shadeBody, emissive: C.shadeRim, emissiveIntensity: 0.35, roughness: 0.4 }),
+      new THREE.MeshStandardMaterial({ color: C.shadeBody, emissive: this.colors.shadeRim, emissiveIntensity: 0.35, roughness: 0.4 }),
     );
-    const rim = new THREE.Mesh(new THREE.SphereGeometry(0.82, 18, 14), new THREE.MeshBasicMaterial({ color: C.shadeRim, side: THREE.BackSide, transparent: true, opacity: 0.55 }));
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xd9c8ff });
+    const rim = new THREE.Mesh(new THREE.SphereGeometry(0.82, 18, 14), new THREE.MeshBasicMaterial({ color: this.colors.shadeRim, side: THREE.BackSide, transparent: true, opacity: 0.55 }));
+    const eyeMat = new THREE.MeshBasicMaterial({ color: this.colors.shadeEye });
     for (const x of [-0.22, 0.22]) {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), eyeMat);
       eye.position.set(x, 0.15, 0.66);
@@ -483,7 +506,13 @@ export class WorldView {
     }
     group.add(body, rim);
     this.scene.add(group);
-    v = { group, body, phase: idNum(id) * 1.7 };
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.05, 0.12, 1, 6, 1, true),
+      new THREE.MeshBasicMaterial({ color: this.colors.shadeRim, transparent: true, opacity: 0.6, depthWrite: false }),
+    );
+    beam.visible = false;
+    this.scene.add(beam);
+    v = { group, body, rim, eyes: eyeMat, beam, phase: idNum(id) * 1.7 };
     this.shades.set(id, v);
     return v;
   }
@@ -534,11 +563,30 @@ export class WorldView {
       if (e.name === 'pulse') this.burst(s.player.pos, T.pulse_radius, C.moteHalo, 0.45);
       if (e.name === 'player_hit') this.burst(s.player.pos, 2.2, C.danger, 0.35);
       if (e.name === 'drifter_steal') this.burst(s.player.pos, 1.6, C.drifter, 0.35);
+      if (e.name === 'refuel') {
+        const l = s.lanterns.find((x) => x.id === e.data.lantern_id)!;
+        this.burst(l.pos, 2.4, C.lanternCore, 0.5);
+      }
+      if (e.name === 'lantern_out') {
+        const l = s.lanterns.find((x) => x.id === e.data.lantern_id)!;
+        this.burst(l.pos, 3.5, C.lanternOff, 0.8);
+      }
       if (e.name === 'lantern_lit') {
         const l = s.lanterns.find((x) => x.id === e.data.lantern_id)!;
         this.lanternView(l.id, l.pos).litAt = this.time;
         this.burst(l.pos, T.safe_radius, C.lanternLit, 0.9);
       }
+    }
+  }
+
+  /** PRD v3 §5.6: switch the shades between the standard and the accessible palette. */
+  setColorScheme(colors: ColorScheme): void {
+    this.colors = colors;
+    for (const sv of this.shades.values()) {
+      sv.rim.material.color.setHex(colors.shadeRim);
+      sv.eyes.color.setHex(colors.shadeEye);
+      sv.beam.material.color.setHex(colors.shadeRim);
+      sv.body.material.emissive.setHex(colors.shadeRim);
     }
   }
 
@@ -573,11 +621,22 @@ export class WorldView {
       }
       lv.progress.visible = !l.lit && l.deposited > 0;
       const k = l.lit ? Math.min(1, lv.litAt === null ? 1 : (t - lv.litAt) / 0.8) : 0;
+      // Low fuel: lantern and bar blink slowly at 1 Hz, in every palette (A44). A weak lantern has no safe zone.
+      const weak = isWeakLantern(l);
+      const dim = weak && !blinkOn(t) ? 0.3 : 1;
+      const fuel = fuelFraction(l);
       lv.light.visible = l.lit;
-      lv.light.intensity = k * (14 + Math.sin(t * 3 + l.pos[0]) * 1.5);
+      lv.light.intensity = k * dim * (6 + 8 * Math.sqrt(fuel) + Math.sin(t * 3 + l.pos[0]) * 1.5);
       lv.shell.material.color.setHex(l.lit ? C.lanternLit : C.lanternOff);
-      lv.shell.material.emissiveIntensity = l.lit ? 1.2 + k : 0.1 + (0.4 * l.deposited) / T.lantern_cost;
-      lv.zone.material.opacity = l.lit ? 0.35 + Math.sin(t * 2) * 0.1 : 0;
+      lv.shell.material.emissiveIntensity = l.lit ? (1.2 + k) * dim : 0.1 + (0.4 * l.deposited) / T.lantern_cost;
+      lv.shell.scale.y = 1.25 * (l.lit ? 1 : DARK_SQUASH);
+      lv.tear.visible = !l.lit;
+      lv.zone.material.opacity = l.lit && !weak ? 0.35 + Math.sin(t * 2) * 0.1 : 0;
+      lv.fuelBack.visible = lv.fuelBar.visible = l.lit;
+      lv.fuelBar.scale.set(Math.max(0.01, 1.64 * fuel), 0.14, 1);
+      lv.fuelBar.material.color.setHex(weak ? (this.colors.warning === '#ffffff' ? 0xffffff : C.danger) : C.lanternCore);
+      lv.fuelBar.material.opacity = dim;
+      lv.fuelBar.material.transparent = dim < 1;
     }
 
     // Gameplay fireflies: they circle and bob around their ground point; dropped ones flicker as they fade.
@@ -638,7 +697,19 @@ export class WorldView {
       const grow = sh.state === 'spawning' ? 1 - sh.stateTicks / 60 : 1;
       sv.group.scale.set(grow * (1 + wob * 0.4), grow * (1.15 - wob * 0.4), grow);
       sv.body.material.color.setHex(sh.state === 'stunned' ? C.shadeStunned : C.shadeBody);
-      sv.body.material.emissiveIntensity = sh.state === 'stunned' ? 0.05 : sh.state === 'chase' ? 0.6 : 0.3;
+      sv.body.material.emissiveIntensity = sh.state === 'stunned' ? 0.05 : sh.state === 'chase' || sh.state === 'drain' ? 0.6 : 0.3;
+      // Draining: a pulsing beam from the shade up to the lantern's paper shell.
+      const target = sh.state === 'drain' ? s.lanterns.find((l) => l.id === sh.targetLanternId) : undefined;
+      sv.beam.visible = !!target;
+      if (target) {
+        const from = tmpV.set(sh.pos[0], sh.pos[1] + wob, sh.pos[2]);
+        const to = new THREE.Vector3(target.pos[0] + 0.9, target.pos[1] + 3.1, target.pos[2]);
+        const dir = to.clone().sub(from);
+        sv.beam.position.copy(from).addScaledVector(dir, 0.5);
+        sv.beam.quaternion.setFromUnitVectors(UP, dir.clone().normalize());
+        sv.beam.scale.set(1, dir.length(), 1);
+        sv.beam.material.opacity = 0.35 + 0.3 * Math.abs(Math.sin(t * 6 + sv.phase));
+      }
     }
 
     // Drifters: silk ribbons rippling in the wind.

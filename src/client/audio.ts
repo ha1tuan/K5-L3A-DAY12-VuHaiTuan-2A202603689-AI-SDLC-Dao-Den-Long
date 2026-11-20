@@ -202,6 +202,13 @@ export class GameAudio {
       case 'wind':
         this.noise(5, { gain: 0.32, from: 500, to: 250, q: 0.6 });
         break;
+      case 'refuel':
+        this.tone(523.25, 0.25, { type: 'triangle', gain: 0.16, to: 784 });
+        break;
+      case 'out':
+        this.tone(392, 0.8, { type: 'sine', gain: 0.22, to: 98 });
+        this.noise(0.6, { gain: 0.15, from: 1500, to: 200, type: 'lowpass' });
+        break;
       case 'won':
         [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => this.tone(f, 1.2, { type: 'triangle', gain: 0.22, delay: i * 0.14 }));
         break;
@@ -218,6 +225,8 @@ export class GameAudio {
       if (e.name === 'mote_picked') this.sound('pickup');
       else if (e.name === 'deposit') this.sound('deposit');
       else if (e.name === 'lantern_lit') this.sound('lit');
+      else if (e.name === 'refuel') this.sound('refuel');
+      else if (e.name === 'lantern_out') this.sound('out');
       else if (e.name === 'pulse') this.sound('pulse');
       else if (e.name === 'player_hit') this.sound(e.data.by === 'fall' ? 'fall' : 'hit');
       else if (e.name === 'shade_spawned') this.sound('shade');
